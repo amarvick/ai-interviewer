@@ -1,0 +1,23 @@
+# Docker file to set up Postgres database. Aids with containerization, prevents system pollution & version conflicts.
+# Run via docker compose up -d (detached mode to run in background)
+# In bash, run docker ps to verify ai_interviewer_db runs on 5432
+# Note: docker must be running in order for docker command to work
+
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: ai_interviewer_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_interviewer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
