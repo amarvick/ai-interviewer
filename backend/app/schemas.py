@@ -5,6 +5,19 @@
 
 from pydantic import BaseModel
 
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+
+    class Config:
+        orm_mode = True
+
 class ProblemCreate(BaseModel):
     title: str
     description: str
@@ -21,4 +34,16 @@ class ProblemResponse(BaseModel):
     class Config:
         orm_mode = True
 
-    
+class AttemptCreate(BaseModel):
+    user_id: int
+    problem_id: int
+    code_submitted: str
+
+class AttemptResponse(BaseModel):
+    id: int
+    user_id: int
+    problem_id: int
+    code_submitted: str
+
+    class Config:
+        orm_mode = True
