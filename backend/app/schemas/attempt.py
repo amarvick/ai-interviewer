@@ -5,45 +5,18 @@
 
 from pydantic import BaseModel
 
-class UserCreate(BaseModel):
-    username: str
-    email: str
-    password: str
-
-class UserResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-
-    class Config:
-        orm_mode = True
-
-class ProblemCreate(BaseModel):
-    title: str
-    description: str
-    difficulty: str
-    category: str
-
-class ProblemResponse(BaseModel):
-    id: int
-    title: str
-    description: str
-    difficulty: str
-    category: str
-
-    class Config:
-        orm_mode = True
-
 class AttemptCreate(BaseModel):
     user_id: int
     problem_id: int
     code_submitted: str
+    result: str
 
 class AttemptResponse(BaseModel):
     id: int
     user_id: int
     problem_id: int
     code_submitted: str
+    result: str
 
     class Config:
         orm_mode = True

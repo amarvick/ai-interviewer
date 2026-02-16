@@ -3,11 +3,10 @@
 # must be in /backend directory to run command
 # to check FastAPI configs, go to http://127.0.0.1:8000/docs
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from sqlalchemy import text
-from sqlalchemy.orm import Session
-from app.database import engine, Base, get_db
-from app import models, schemas
+from app.db.database import engine, Base
+from app.api.routers import user, problem, attempt
 
 app = FastAPI()
 
@@ -23,21 +22,6 @@ def check_db():
 
 # Ensures tables are created
 Base.metadata.create_all(bind=engine)
-
-@app.post("/problems", response_model=schemas.ProblemResponse)
-def create_problem(problem: schemas.ProblemCreate, db: Session = Depends(get_db)):
-    db_problem = models.Problem(
-        title=problem.title,
-        description=problem.description,
-        difficulty=problem.difficulty,
-        category=problem.category
-    )
-    db.add(db_problem)
-    db.commit()
-    db.refresh(db_problem)
-    return db_problem
-
-@app.get("/problems", response_model=list[schemas.ProblemResponse])
-def get_problems(db: Session = Depends(get_db)):
-    problems = db.query(models.Problem).all()
-    return problems
+app.include_router(user.router)
+app.include_router(problem.router)
+app.include_router(attempt.router)

@@ -1,20 +1,7 @@
-# DB Table Models
-
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, Text, ForeignKey, UniqueConstraint, String, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.database import Base
-
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    email = Column(String(100), unique=True, index=True, nullable=False)
-    password_hash = Column(String(128), nullable=False)
-    created_at= Column(DateTime, default=datetime.utcnow)
-
-    attempts = relationship("Attempt", back_populates="user")
+from app.db.database import Base
 
 class Problem(Base):
     __tablename__ = "problems"
@@ -57,16 +44,3 @@ class ProblemListProblem(Base):
 
     problem_list = relationship("ProblemList", back_populates="problem_links")
     problem = relationship("Problem", back_populates="problem_list_links")   
-
-class Attempt(Base):
-    __tablename__ = "attempts"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False)
-    code_submitted = Column(Text, nullable=False) # Code submitted by the user for this attempt
-    result = Column(String(20), nullable=False)  # e.g., "passed", "failed"
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship("User", back_populates="attempts")
-    problem = relationship("Problem", back_populates="attempts")
