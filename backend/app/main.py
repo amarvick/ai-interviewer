@@ -6,7 +6,7 @@
 from fastapi import FastAPI
 from sqlalchemy import text
 from app.db.database import engine, Base
-from app.api.routers import user, problem, attempt
+from app.api.routers import user, problem, attempt, testcase
 
 app = FastAPI()
 
@@ -25,3 +25,4 @@ Base.metadata.create_all(bind=engine)
 app.include_router(user.router)
 app.include_router(problem.router)
 app.include_router(attempt.router)
+app.include_router(testcase.router)

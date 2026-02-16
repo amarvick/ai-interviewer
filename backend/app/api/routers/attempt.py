@@ -2,22 +2,18 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.schemas.attempt import AttemptCreate, AttemptResponse
-from app.db.models.attempt import Attempt
+from app.crud.attempt import create_attempt as create_attempt_record, get_attempts as get_attempt_records
 
 router = APIRouter()
 
-@router.post("/attempt", response_model=AttemptCreate)
+@router.post("/attempt", response_model=AttemptResponse)
 def create_attempt(attempt: AttemptCreate, db: Session = Depends(get_db)):
-    db_attempt = Attempt(
-        title=attempt.code_submitted,
-    )
-    db.add(db_attempt)
-    db.commit()
-    db.refresh(db_attempt)
-    return db_attempt
+    return create_attempt_record(attempt, db)
 
-# TODO - should get attempts by user_id AND problem_id
 @router.get("/attempts", response_model=list[AttemptResponse])
-def get_attempts(db: Session = Depends(get_db)):
-    attempts = db.query(Attempt).all()
-    return attempts
+def get_attempts(
+    db: Session = Depends(get_db),
+    user_id: int | None = None,
+    problem_id: int | None = None
+):
+    return get_attempt_records(db, user_id, problem_id)
