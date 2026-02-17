@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.db.models.problem import Problem
+from app.db.models.problem_list import ProblemList
 from app.schemas.problem import ProblemCreate
 
 def create_problem(problem: ProblemCreate, db: Session):
@@ -20,3 +21,7 @@ def get_problems(db: Session):
 
 def get_problem_by_id(db, problem_id: int):
     return db.query(Problem).filter(Problem.id == problem_id).first()
+
+
+def get_problem_lists(db: Session):
+    return db.query(ProblemList).all()
