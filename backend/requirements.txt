@@ -1,1 +1,6 @@
-# Uvicorn - Helps create minimal app and ensures Python env, server, routing and dev reload all work.
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+python-jose[cryptography]

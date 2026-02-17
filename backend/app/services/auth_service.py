@@ -1,4 +1,4 @@
-from app.core.security import verify_password
+from app.core.security import verify_password, create_access_token
 from app.crud.user import get_user_by_email, create_user
 from typing import cast
 from fastapi import HTTPException, status
@@ -10,7 +10,9 @@ def login(user, db):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
-    return db_user
+    
+    token = create_access_token(db_user.id)
+    return {"access_token": token, "token_type": "bearer"}
 
 def register(user, db):
     existing_user = get_user_by_email(db, user.email)

@@ -7,4 +7,3 @@ def submit_solution(attempt: AttemptSubmit, db):
     result = evaluation_service.evaluate_attempt(attempt.code_submitted, db_test_cases) 
     return result
     
-
