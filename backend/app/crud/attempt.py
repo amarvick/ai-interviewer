@@ -1,13 +1,16 @@
 from sqlalchemy.orm import Session
 from app.db.models.attempt import Attempt
-from app.schemas.attempt import AttemptCreate
+from app.schemas.attempt import AttemptSubmit
 
-def create_attempt(attempt: AttemptCreate, db: Session):
+def create_attempt(attempt: AttemptSubmit, evaluation: dict, user_id: int, db: Session):
+    result = str(evaluation.get("result"))
+
     db_attempt = Attempt(
         code_submitted=attempt.code_submitted,
-        result=attempt.result,
-        user_id=attempt.user_id,
-        problem_id=attempt.problem_id
+        result=result,
+        user_id=user_id,
+        problem_id=attempt.problem_id,
+        error=evaluation.get("error_message")
     )
     db.add(db_attempt)
     db.commit()
