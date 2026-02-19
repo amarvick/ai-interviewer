@@ -4,23 +4,21 @@ import ProblemGrid from "../components/ProblemGrid";
 
 export default function ProblemListPage() {
   const { id } = useParams();
-  const { data: problems, isLoading, isError, error } = useProblemsQuery(id!);
-
-  console.log("****** PROBLEMS", problems);
+  const { data, isLoading, isError, error } = useProblemsQuery(id ?? "");
 
   return (
     <section className="simple-page">
-      <h1>Problem List</h1>{" "}
+      <h1>{data?.name ?? "Problem List"}</h1>
       {isLoading && <p className="status-line">Loading problem lists...</p>}
       {isError && (
         <p className="status-line error">
           {(error as Error).message || "Request failed."}
         </p>
       )}
-      {!isLoading && !isError && problems && problems.length > 0 && (
-        <ProblemGrid problems={problems} />
+      {!isLoading && !isError && data && data.problems.length > 0 && (
+        <ProblemGrid problems={data.problems} />
       )}
-      {!isLoading && !isError && problems?.length === 0 && (
+      {!isLoading && !isError && data?.problems.length === 0 && (
         <p className="status-line">No problem lists found yet.</p>
       )}
     </section>

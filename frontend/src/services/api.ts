@@ -1,4 +1,7 @@
-import type { Problem, ProblemList } from "../types/problem";
+import type {
+  ProblemList,
+  ProblemListProblemsResponse,
+} from "../types/problem";
 import type {
   LoginPayload,
   SignupPayload,
@@ -28,10 +31,12 @@ export async function getProblemLists(): Promise<ProblemList[]> {
   return parseJson<ProblemList[]>(response);
 }
 
-export async function getProblems(problemListId: string): Promise<Problem[]> {
+export async function getProblems(
+  problemListId: string,
+): Promise<ProblemListProblemsResponse> {
   console.log("Fetching problems for problem list ID:", problemListId);
   const response = await fetch(`${API_BASE_URL}/problems/${problemListId}`);
-  return parseJson<Problem[]>(response);
+  return parseJson<ProblemListProblemsResponse>(response);
 }
 
 export async function login(payload: LoginPayload): Promise<TokenResponse> {

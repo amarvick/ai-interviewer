@@ -32,3 +32,8 @@ class ProblemListResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ProblemListProblemsResponse(BaseModel):
+    name: str
+    problems: list[ProblemResponse]

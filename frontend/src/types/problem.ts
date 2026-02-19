@@ -13,3 +13,8 @@ export interface ProblemList {
   name: string;
   icon_url: string;
 }
+
+export interface ProblemListProblemsResponse {
+  name: string;
+  problems: Problem[];
+}

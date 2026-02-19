@@ -7,7 +7,7 @@ interface ProblemListCardProps {
 
 export default function ProblemListCard({ problemList }: ProblemListCardProps) {
   return (
-    <Link to={`/lists/${problemList.id}`} className="problem-card">
+    <Link to={`/list/${problemList.id}`} className="problem-card">
       <div className="problem-card-icon-wrap">
         <img
           src={problemList.icon_url}

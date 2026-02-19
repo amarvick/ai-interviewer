@@ -27,8 +27,11 @@ def get_problem_by_id(db, problem_id: int):
 def get_problem_lists(db: Session):
     return db.query(ProblemList).all()
 
+def get_problem_list_name_by_id(db: Session, problem_list_id: str):
+    problem_list = db.query(ProblemList).filter(ProblemList.id == problem_list_id).first()
+    return problem_list.name if problem_list else None
+
 def get_problems_from_problem_list(db: Session, problem_list_id: str):
-    print("Getting problems for problem list ID:", problem_list_id)
     return (
         db.query(Problem)
         .join(ProblemListProblem, ProblemListProblem.problem_id == Problem.id)

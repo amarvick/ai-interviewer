@@ -1,12 +1,18 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.schemas.problem import ProblemCreate, ProblemListResponse, ProblemResponse
+from app.schemas.problem import (
+    ProblemCreate,
+    ProblemListProblemsResponse,
+    ProblemListResponse,
+    ProblemResponse,
+)
 from app.crud.problem import (
     create_problem as create_problem_record,
     get_problem_lists as get_problem_list_records,
     get_problems as get_problem_records,
-    get_problems_from_problem_list as get_problems_from_problem_list_record
+    get_problems_from_problem_list as get_problems_from_problem_list_record,
+    get_problem_list_name_by_id,
 )
 
 router = APIRouter()
@@ -24,7 +30,11 @@ def get_problems(db: Session = Depends(get_db)):
 def get_problem_lists(db: Session = Depends(get_db)):
     return get_problem_list_records(db)
 
-@router.get("/problems/{problem_list_id}", response_model=list[ProblemResponse])
+@router.get("/problems/{problem_list_id}", response_model=ProblemListProblemsResponse)
 def get_problems_from_problem_list(problem_list_id: str, db: Session = Depends(get_db)):
-    print("********* CALLING problems/problem_list_id endpoint with problem_list_id:", problem_list_id)
-    return get_problems_from_problem_list_record(db, problem_list_id)
+    list_name = get_problem_list_name_by_id(db, problem_list_id)
+    if list_name is None:
+        raise HTTPException(status_code=404, detail="Problem list not found")
+
+    problems = get_problems_from_problem_list_record(db, problem_list_id)
+    return {"name": list_name, "problems": problems}
