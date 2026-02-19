@@ -6,6 +6,7 @@ export function useProblemsQuery(problemListId: string) {
   return useQuery({
     queryKey: ["problems", problemListId],
     queryFn: getProblemsById,
+    enabled: Boolean(problemListId),
     retry: 1,
     refetchOnWindowFocus: false,
   });

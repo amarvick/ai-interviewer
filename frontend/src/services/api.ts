@@ -29,6 +29,7 @@ export async function getProblemLists(): Promise<ProblemList[]> {
 }
 
 export async function getProblems(problemListId: string): Promise<Problem[]> {
+  console.log("Fetching problems for problem list ID:", problemListId);
   const response = await fetch(`${API_BASE_URL}/problems/${problemListId}`);
   return parseJson<Problem[]>(response);
 }

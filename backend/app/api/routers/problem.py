@@ -25,5 +25,6 @@ def get_problem_lists(db: Session = Depends(get_db)):
     return get_problem_list_records(db)
 
 @router.get("/problems/{problem_list_id}", response_model=list[ProblemResponse])
-def get_problems_from_problem_list(problem_list_id: int, db: Session = Depends(get_db)):
+def get_problems_from_problem_list(problem_list_id: str, db: Session = Depends(get_db)):
+    print("********* CALLING problems/problem_list_id endpoint with problem_list_id:", problem_list_id)
     return get_problems_from_problem_list_record(db, problem_list_id)

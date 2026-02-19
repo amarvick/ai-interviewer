@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useProblemsQuery } from "../hooks/useProblemsQuery";
+import ProblemGrid from "../components/ProblemGrid";
 
 export default function ProblemListPage() {
   const { id } = useParams();
@@ -16,10 +17,10 @@ export default function ProblemListPage() {
           {(error as Error).message || "Request failed."}
         </p>
       )}
-      {/* {!isLoading && !isError && problems && problems.length > 0 && (
-        <ProblemListGrid problemLists={problemLists} />
-      )} */}
-      {!isLoading && !isError && problemLists?.length === 0 && (
+      {!isLoading && !isError && problems && problems.length > 0 && (
+        <ProblemGrid problems={problems} />
+      )}
+      {!isLoading && !isError && problems?.length === 0 && (
         <p className="status-line">No problem lists found yet.</p>
       )}
     </section>
