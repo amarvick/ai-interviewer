@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, String, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
@@ -6,7 +6,7 @@ from app.db.database import Base
 class ProblemList(Base):
     __tablename__ = "problem_lists"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
     icon_url = Column(String, index=True, nullable=False)
     created_at= Column(DateTime, default=datetime.utcnow)

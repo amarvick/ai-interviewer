@@ -1,4 +1,4 @@
-import type { ProblemList } from "../types/problem";
+import type { Problem, ProblemList } from "../types/problem";
 import type {
   LoginPayload,
   SignupPayload,
@@ -6,7 +6,8 @@ import type {
   User,
 } from "../types/user";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -25,6 +26,11 @@ async function parseJson<T>(response: Response): Promise<T> {
 export async function getProblemLists(): Promise<ProblemList[]> {
   const response = await fetch(`${API_BASE_URL}/problem-lists`);
   return parseJson<ProblemList[]>(response);
+}
+
+export async function getProblems(problemListId: string): Promise<Problem[]> {
+  const response = await fetch(`${API_BASE_URL}/problems/${problemListId}`);
+  return parseJson<Problem[]>(response);
 }
 
 export async function login(payload: LoginPayload): Promise<TokenResponse> {

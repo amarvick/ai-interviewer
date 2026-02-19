@@ -6,6 +6,7 @@ from app.crud.problem import (
     create_problem as create_problem_record,
     get_problem_lists as get_problem_list_records,
     get_problems as get_problem_records,
+    get_problems_from_problem_list as get_problems_from_problem_list_record
 )
 
 router = APIRouter()
@@ -22,3 +23,7 @@ def get_problems(db: Session = Depends(get_db)):
 @router.get("/problem-lists", response_model=list[ProblemListResponse])
 def get_problem_lists(db: Session = Depends(get_db)):
     return get_problem_list_records(db)
+
+@router.get("/problems/{problem_list_id}", response_model=list[ProblemResponse])
+def get_problems_from_problem_list(problem_list_id: int, db: Session = Depends(get_db)):
+    return get_problems_from_problem_list_record(db, problem_list_id)

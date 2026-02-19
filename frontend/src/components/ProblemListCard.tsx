@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import type { ProblemList } from "../types/problem";
 
-interface ProblemCardProps {
+interface ProblemListCardProps {
   problemList: ProblemList;
 }
 
-export default function ProblemCard({ problemList }: ProblemCardProps) {
+export default function ProblemListCard({ problemList }: ProblemListCardProps) {
   return (
     <Link to={`/lists/${problemList.id}`} className="problem-card">
       <div className="problem-card-icon-wrap">

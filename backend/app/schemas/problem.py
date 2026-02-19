@@ -26,7 +26,7 @@ class ProblemListCreate(BaseModel):
     icon_url: str
 
 class ProblemListResponse(BaseModel):
-    id: int
+    id: str
     name: str
     icon_url: str
 
