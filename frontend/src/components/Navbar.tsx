@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { clearAuthToken, isAuthenticated, onAuthChanged } from "../services/auth";
+import "./Navbar.css";
 
 export default function Navbar() {
   const [loggedIn, setLoggedIn] = useState<boolean>(isAuthenticated());

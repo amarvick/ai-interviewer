@@ -10,7 +10,6 @@ from app.schemas.problem import (
 from app.crud.problem import (
     create_problem as create_problem_record,
     get_problem_lists as get_problem_list_records,
-    get_problems as get_problem_records,
     get_problems_from_problem_list as get_problems_from_problem_list_record,
     get_problem_list_name_by_id,
 )
@@ -21,9 +20,6 @@ router = APIRouter()
 def create_problem(problem: ProblemCreate, db: Session = Depends(get_db)):
     return create_problem_record(problem, db)
 
-@router.get("/problem", response_model=list[ProblemResponse])
-def get_problems(db: Session = Depends(get_db)):
-    return get_problem_records(db)
 
 
 @router.get("/problem-lists", response_model=list[ProblemListResponse])

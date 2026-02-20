@@ -1,5 +1,6 @@
 import ProblemListCard from "./ProblemListCard";
 import type { ProblemList } from "../types/problem";
+import "./ProblemListGrid.css";
 
 interface ProblemListGridProps {
   problemLists: ProblemList[];

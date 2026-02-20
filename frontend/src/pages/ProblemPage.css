@@ -1,0 +1,19 @@
+.simple-page {
+  margin: 1.5rem auto;
+  width: min(480px, 100%);
+  border: 1px solid rgba(132, 153, 219, 0.28);
+  border-radius: 16px;
+  background: rgba(8, 13, 28, 0.82);
+  padding: 1.2rem;
+}
+
+.simple-page h1 {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .simple-page {
+    border-radius: 14px;
+    padding: 1rem;
+  }
+}

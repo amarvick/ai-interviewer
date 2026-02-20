@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { ProblemList } from "../types/problem";
+import "./ProblemListCard.css";
 
 interface ProblemListCardProps {
   problemList: ProblemList;

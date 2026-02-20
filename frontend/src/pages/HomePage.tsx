@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import ProblemListGrid from "../components/ProblemListGrid";
 import { useProblemListsQuery } from "../hooks/useProblemListsQuery";
+import "./HomePage.css";
 
 export default function HomePage() {
   const {
@@ -9,7 +10,6 @@ export default function HomePage() {
     isError,
     error,
   } = useProblemListsQuery();
-  console.log("Fetched problem lists:", problemLists);
 
   return (
     <div className="home-page">

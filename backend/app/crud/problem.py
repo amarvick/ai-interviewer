@@ -16,17 +16,15 @@ def create_problem(problem: ProblemCreate, db: Session):
     db.refresh(db_problem)
     return db_problem 
 
-def get_problems(db: Session):
-    problems = db.query(Problem).all()
-    return problems
-
+# For problem page
 def get_problem_by_id(db, problem_id: int):
     return db.query(Problem).filter(Problem.id == problem_id).first()
 
-
+# For home page
 def get_problem_lists(db: Session):
     return db.query(ProblemList).all()
 
+# For problem list page
 def get_problem_list_name_by_id(db: Session, problem_list_id: str):
     problem_list = db.query(ProblemList).filter(ProblemList.id == problem_list_id).first()
     return problem_list.name if problem_list else None

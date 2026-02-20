@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register } from "../services/api";
+import "./SignupPage.css";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");

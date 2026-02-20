@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Problem } from "../types/problem";
+import "./ProblemCard.css";
 
 interface ProblemCardProps {
   problem: Problem;
@@ -11,7 +12,7 @@ export default function ProblemCard({ problem }: ProblemCardProps) {
       <div className="problem-card-icon-wrap">
         <img
           alt={`${problem.title} icon`}
-          className="problem-card-i con"
+          className="problem-card-icon"
           loading="lazy"
         />
       </div>
