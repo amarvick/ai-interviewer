@@ -10,7 +10,7 @@ export default function ProblemListGrid({
   problemLists,
 }: ProblemListGridProps) {
   return (
-    <section className="problem-grid">
+    <section className="problem-list-grid">
       {problemLists.map((list) => (
         <ProblemListCard key={list.id} problemList={list} />
       ))}

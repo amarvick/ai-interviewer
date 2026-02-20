@@ -12,7 +12,7 @@ export default function ProblemListPage() {
       id: 1,
       title: "Two Sum",
       difficulty: "Easy",
-      category: "string",
+      category: "Strings",
       description:
         "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
     },
@@ -20,7 +20,7 @@ export default function ProblemListPage() {
       id: 2,
       title: "Longest Substring Without Repeating Characters",
       difficulty: "Medium",
-      category: "string",
+      category: "Strings",
       description:
         "Given a string s, find the length of the longest substring without repeating characters.",
     },
@@ -28,14 +28,14 @@ export default function ProblemListPage() {
       id: 3,
       title: "Median of Two Sorted Arrays",
       difficulty: "Hard",
-      category: "arrays",
+      category: "Arrays",
       description:
         "Given two sorted arrays nums1 and nums2 of size m and n respectively, return the median of the two sorted arrays.",
     },
   ];
   /* TODO -- create loading spinner */
   return (
-    <section className="simple-page">
+    <section className="problem-list-section">
       <h1>{data?.name ?? "Problem List"}</h1>
       {isLoading && <p className="status-line">Loading problem lists...</p>}
       {isError && (

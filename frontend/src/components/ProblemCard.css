@@ -1,10 +1,16 @@
 .problem-card {
-  display: grid;
-  gap: 0.55rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
   border-radius: 14px;
   padding: 0.95rem;
   border: 1px solid rgba(130, 152, 222, 0.3);
-  background: linear-gradient(180deg, rgba(34, 50, 90, 0.35), rgba(10, 15, 30, 0.45));
+  background: linear-gradient(
+    180deg,
+    rgba(34, 50, 90, 0.35),
+    rgba(10, 15, 30, 0.45)
+  );
   transition: transform 130ms ease, border-color 130ms ease;
 }
 
@@ -31,10 +37,28 @@
 .problem-card-title {
   margin: 0;
   font-size: 1.02rem;
+  font-weight: 600;
+  color: #eff3ff;
+  line-height: 1.35;
 }
 
-.problem-card-subtitle {
+.problem-card-meta {
   margin: 0;
   color: #9fb0e8;
   font-size: 0.88rem;
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .problem-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .problem-card-meta {
+    white-space: normal;
+    text-align: left;
+  }
 }
