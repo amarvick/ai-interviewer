@@ -9,7 +9,8 @@ def create_problem(problem: ProblemCreate, db: Session):
         title=problem.title,
         description=problem.description,
         difficulty=problem.difficulty,
-        category=problem.category
+        category=problem.category,
+        starter_code=problem.starter_code or {},
     )
     db.add(db_problem)
     db.commit()
@@ -17,7 +18,7 @@ def create_problem(problem: ProblemCreate, db: Session):
     return db_problem 
 
 # For problem page
-def get_problem_by_id(db, problem_id: int):
+def get_problem_by_id(db, problem_id: str):
     return db.query(Problem).filter(Problem.id == problem_id).first()
 
 # For home page

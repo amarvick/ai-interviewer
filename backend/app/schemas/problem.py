@@ -10,6 +10,7 @@ class ProblemCreate(BaseModel):
     description: str
     difficulty: str
     category: str
+    starter_code: dict[str, str] | None = None
 
 class ProblemResponse(BaseModel):
     id: int
@@ -17,6 +18,7 @@ class ProblemResponse(BaseModel):
     description: str
     difficulty: str
     category: str
+    starter_code: dict[str, str]
 
     class Config:
         orm_mode = True

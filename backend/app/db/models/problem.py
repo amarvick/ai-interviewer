@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey, UniqueConstraint, String, DateTime
+from sqlalchemy import Column, Integer, Text, String, DateTime, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
@@ -11,6 +11,7 @@ class Problem(Base):
     description = Column(Text, nullable=False)
     category = Column(String(50), index=True, nullable=False)
     difficulty = Column(String(20), index=True, nullable=False)
+    starter_code = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # _links is meant to point to the middleman between two tables with many to many relationships, with back_populates being that other object

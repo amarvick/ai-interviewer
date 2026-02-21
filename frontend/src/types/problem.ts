@@ -6,6 +6,7 @@ export interface Problem {
   description: string;
   difficulty: Difficulty;
   category: string;
+  starter_code: Record<string, string>;
 }
 
 export interface ProblemList {

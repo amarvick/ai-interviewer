@@ -13,6 +13,7 @@ export default function ProblemListPage() {
       title: "Two Sum",
       difficulty: "Easy",
       category: "Strings",
+      starter_code: {},
       description:
         "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
     },
@@ -21,6 +22,7 @@ export default function ProblemListPage() {
       title: "Longest Substring Without Repeating Characters",
       difficulty: "Medium",
       category: "Strings",
+      starter_code: {},
       description:
         "Given a string s, find the length of the longest substring without repeating characters.",
     },
@@ -29,6 +31,7 @@ export default function ProblemListPage() {
       title: "Median of Two Sorted Arrays",
       difficulty: "Hard",
       category: "Arrays",
+      starter_code: {},
       description:
         "Given two sorted arrays nums1 and nums2 of size m and n respectively, return the median of the two sorted arrays.",
     },
@@ -46,7 +49,7 @@ export default function ProblemListPage() {
       {!isLoading && !isError && data && testProblems.length > 0 && (
         <ProblemGrid problems={testProblems} />
       )}
-      {!isLoading && !isError && data?.problems.length === 0 && (
+      {!isLoading && !isError && testProblems.length === 0 && (
         <p className="status-line">No problem lists found yet.</p>
       )}
     </section>

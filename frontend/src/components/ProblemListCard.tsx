@@ -8,7 +8,7 @@ interface ProblemListCardProps {
 
 export default function ProblemListCard({ problemList }: ProblemListCardProps) {
   return (
-    <Link to={`/list/${problemList.id}`} className="problem-card">
+    <Link to={`/list/${problemList.id}`} className="problem-list-card">
       <div className="problem-card-icon-wrap">
         <img
           src={problemList.icon_url}
@@ -17,8 +17,7 @@ export default function ProblemListCard({ problemList }: ProblemListCardProps) {
           loading="lazy"
         />
       </div>
-      <h3 className="problem-card-title">{problemList.name}</h3>
-      <p className="problem-card-subtitle">Open list</p>
+      <h3 className="problem-list-card-title">{problemList.name}</h3>
     </Link>
   );
 }

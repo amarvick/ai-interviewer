@@ -9,6 +9,7 @@ interface ProblemGridProps {
 export default function ProblemGrid({ problems }: ProblemGridProps) {
   return (
     <section className="problem-grid">
+      {/* TODO - Include sorting component here */}
       {problems.map((problem) => (
         <ProblemCard key={problem.id} problem={problem} />
       ))}
