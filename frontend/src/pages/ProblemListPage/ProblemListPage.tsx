@@ -1,41 +1,12 @@
 import { useParams } from "react-router-dom";
-import { useProblemsQuery } from "../hooks/useProblemsQuery";
-import ProblemGrid from "../components/ProblemGrid";
+import { useProblemsQuery } from "../../hooks/useProblemsQuery";
+import ProblemGrid from "../../components/ProblemGrid";
 import "./ProblemListPage.css";
 
 export default function ProblemListPage() {
   const { id } = useParams();
   const { data, isLoading, isError, error } = useProblemsQuery(id ?? "");
 
-  // const testProblems = [
-  //   {
-  //     id: 1,
-  //     title: "Two Sum",
-  //     difficulty: "Easy",
-  //     category: "Strings",
-  //     starter_code: {},
-  //     description:
-  //       "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "Longest Substring Without Repeating Characters",
-  //     difficulty: "Medium",
-  //     category: "Strings",
-  //     starter_code: {},
-  //     description:
-  //       "Given a string s, find the length of the longest substring without repeating characters.",
-  //   },
-  //   {
-  //     id: 3,
-  //     title: "Median of Two Sorted Arrays",
-  //     difficulty: "Hard",
-  //     category: "Arrays",
-  //     starter_code: {},
-  //     description:
-  //       "Given two sorted arrays nums1 and nums2 of size m and n respectively, return the median of the two sorted arrays.",
-  //   },
-  // ];
   /* TODO -- create loading spinner */
   return (
     <section className="problem-list-section">
