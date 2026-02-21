@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import ProblemListGrid from "../components/ProblemListGrid";
-import { useProblemListsQuery } from "../hooks/useProblemListsQuery";
+import ProblemListGrid from "../../components/ProblemListGrid";
+import { useProblemListsQuery } from "../../hooks/useProblemListsQuery";
 import "./HomePage.css";
 
 export default function HomePage() {

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { register } from "../services/api";
-import "./SignupPage.css";
+import { login } from "../../services/api";
+import { setAuthToken } from "../../services/auth";
+import "./LoginPage.css";
 
-export default function SignupPage() {
-  const [username, setUsername] = useState("");
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,11 +18,14 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      await register({ username, email, password });
-      navigate("/login");
+      const result = await login({ email, password });
+      setAuthToken(result.access_token);
+      navigate("/");
     } catch (submitError) {
       const message =
-        submitError instanceof Error ? submitError.message : "Sign up failed. Please retry.";
+        submitError instanceof Error
+          ? submitError.message
+          : "Login failed. Please retry.";
       setError(message);
     } finally {
       setLoading(false);
@@ -31,19 +34,8 @@ export default function SignupPage() {
 
   return (
     <section className="auth-page">
-      <h1>Signup</h1>
+      <h1>Login</h1>
       <form className="auth-form" onSubmit={handleSubmit}>
-        <label>
-          Username
-          <input
-            type="text"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            required
-            autoComplete="username"
-          />
-        </label>
-
         <label>
           Email
           <input
@@ -62,19 +54,19 @@ export default function SignupPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
-            autoComplete="new-password"
+            autoComplete="current-password"
           />
         </label>
 
         {error && <p className="status-line error">{error}</p>}
 
         <button type="submit" disabled={loading}>
-          {loading ? "Creating account..." : "Create Account"}
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
 
       <p className="auth-alt">
-        Already have an account? <Link to="/login">Login</Link>
+        Need an account? <Link to="/signup">Sign up</Link>
       </p>
     </section>
   );

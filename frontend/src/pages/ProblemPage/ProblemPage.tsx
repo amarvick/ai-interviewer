@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useProblemQuery } from "../hooks/useProblemQuery";
+import { useProblemQuery } from "../../hooks/useProblemQuery";
 import "./ProblemPage.css";
 
 const FALLBACK_STARTER_CODE: Record<string, string> = {
@@ -34,9 +34,8 @@ export default function ProblemPage() {
   }, [starterCode]);
 
   useEffect(() => {
-    const initialLanguage = languageOptions.includes("javascript")
-      ? "javascript"
-      : languageOptions[0];
+    const initialLanguage = languageOptions[0]; // Default OR go to user settings and get preferred language
+    // TODO later - allow button to set default language IF the user wants
     setSelectedLanguage(initialLanguage);
     setCode(starterCode[initialLanguage] ?? "");
   }, [languageOptions, starterCode]);
@@ -44,7 +43,10 @@ export default function ProblemPage() {
   const handleLanguageChange = (nextLanguage: string) => {
     setSelectedLanguage(nextLanguage);
     setCode(starterCode[nextLanguage] ?? "");
-    setTerminalLines((prev) => [...prev, `$ Switched language to ${nextLanguage}.`]);
+    setTerminalLines((prev) => [
+      ...prev,
+      `$ Switched language to ${nextLanguage}.`,
+    ]);
   };
 
   const runCode = () => {
