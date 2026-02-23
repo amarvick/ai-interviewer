@@ -1,0 +1,46 @@
+.editor-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  min-height: 0;
+  border: 1px solid rgba(132, 153, 219, 0.28);
+  border-radius: 14px;
+  background: rgba(8, 13, 28, 0.82);
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(132, 153, 219, 0.22);
+}
+
+.editor-toolbar label {
+  font-size: 0.88rem;
+  color: #bccaff;
+}
+
+.editor-toolbar select {
+  border: 1px solid rgba(132, 153, 219, 0.35);
+  border-radius: 8px;
+  background: rgba(5, 11, 24, 0.8);
+  color: #eff3ff;
+  padding: 0.35rem 0.5rem;
+}
+
+.toolbar-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.toolbar-actions button {
+  border: 1px solid rgba(174, 192, 255, 0.4);
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(49, 76, 157, 0.8), rgba(57, 108, 157, 0.75));
+  color: #f5f8ff;
+  padding: 0.42rem 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}

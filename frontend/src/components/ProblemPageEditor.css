@@ -1,0 +1,14 @@
+.editor-monaco-wrap {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0 0 14px 14px;
+}
+
+.editor-stack {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 250px;
+  gap: 0;
+}
