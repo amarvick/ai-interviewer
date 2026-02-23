@@ -3,6 +3,7 @@ import { useProblemQuery } from "../../hooks/useProblemQuery";
 import "./ProblemPage.css";
 import ProblemPageDescription from "../../components/ProblemPageDescription";
 import ProblemPageEditor from "../../components/ProblemPageEditor";
+import SplitPane from "../../components/SplitPane";
 
 export default function ProblemPage() {
   const { id } = useParams();
@@ -18,10 +19,15 @@ export default function ProblemPage() {
         </p>
       )}
       {!isLoading && !isError && data && (
-        <div className="problem-layout">
-          <ProblemPageDescription problem={data} />
-          <ProblemPageEditor problem={data} />
-        </div>
+        <SplitPane
+          orientation="vertical"
+          defaultPrimarySize={42}
+          minPrimarySize={28}
+          maxPrimarySize={72}
+          className="problem-layout"
+          primary={<ProblemPageDescription problem={data} />}
+          secondary={<ProblemPageEditor problem={data} />}
+        />
       )}
     </section>
   );
