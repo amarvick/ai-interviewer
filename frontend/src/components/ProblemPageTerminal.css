@@ -2,6 +2,9 @@
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr;
+  height: 250px;
+  min-height: 250px;
+  max-height: 250px;
 }
 
 .terminal-header {
