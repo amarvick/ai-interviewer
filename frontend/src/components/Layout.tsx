@@ -1,16 +1,14 @@
-import type { ReactNode } from "react";
+import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import "./Layout.css";
 
-interface LayoutProps {
-  children: ReactNode;
-}
-
-export default function Layout({ children }: LayoutProps) {
+export default function Layout() {
   return (
     <div className="app-shell">
       <Navbar />
-      <main className="app-main">{children}</main>
+      <main className="app-main">
+        <Outlet />
+      </main>
     </div>
   );
 }

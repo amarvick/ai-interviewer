@@ -4,6 +4,7 @@ import "./ProblemPageEditor.css";
 import ProblemPageCodeEditor from "./ProblemPageCodeEditor";
 import ProblemPageTerminal from "./ProblemPageTerminal";
 
+// TODO - Rework this file later. For now, just want to get something functional in place.
 interface ProblemPageEditorProps {
   problem: Problem;
 }

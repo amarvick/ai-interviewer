@@ -10,15 +10,15 @@ import ProblemPage from "../pages/ProblemPage/ProblemPage";
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
+      <Routes>
+        <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/list/:id" element={<ProblemListPage />} />
           <Route path="/problem/:id" element={<ProblemPage />} />
-        </Routes>
-      </Layout>
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

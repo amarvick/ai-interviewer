@@ -1,6 +1,7 @@
 import Editor, { type BeforeMount } from "@monaco-editor/react";
 import "./ProblemPageCodeEditor.css";
 
+// TODO - Rework this file later. For now, just want to get something functional in place.
 const LANGUAGE_LABELS: Record<string, string> = {
   python: "Python",
   javascript: "JavaScript",

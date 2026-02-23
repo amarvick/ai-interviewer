@@ -4,7 +4,11 @@ interface ProblemPageTerminalProps {
   lines: string[];
 }
 
-export default function ProblemPageTerminal({ lines }: ProblemPageTerminalProps) {
+// TODO - Don't make this a terminal, make it show 3 test cases on
+// One tab and then show terminal output on another tab. For now, just want to get something functional in place.
+export default function ProblemPageTerminal({
+  lines,
+}: ProblemPageTerminalProps) {
   return (
     <section className="terminal-panel" aria-label="Terminal output">
       <header className="terminal-header">Terminal</header>
