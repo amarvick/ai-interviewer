@@ -1,0 +1,32 @@
+.terminal-panel {
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 250px;
+  min-height: 250px;
+  max-height: 250px;
+  border: 1px solid rgba(132, 153, 219, 0.28);
+  border-radius: 14px;
+  background: rgba(8, 13, 28, 0.82);
+}
+
+.terminal-header {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid rgba(132, 153, 219, 0.22);
+  color: #bccaff;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.terminal-output {
+  margin: 0;
+  padding: 0.8rem;
+  overflow: auto;
+  background: rgba(3, 8, 18, 0.85);
+  color: #9de8b4;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  display: grid;
+  gap: 0.25rem;
+}
