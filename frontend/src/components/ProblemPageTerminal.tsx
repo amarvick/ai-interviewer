@@ -4,11 +4,6 @@ interface ProblemPageTerminalProps {
   lines: string[];
 }
 
-<<<<<<< HEAD
-// TODO - Don't make this a terminal, make it show 3 test cases on
-// One tab and then show terminal output on another tab. For now, just want to get something functional in place.
-=======
->>>>>>> recovery-branch-new-css
 export default function ProblemPageTerminal({
   lines,
 }: ProblemPageTerminalProps) {
