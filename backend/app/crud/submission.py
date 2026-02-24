@@ -1,10 +1,12 @@
 from sqlalchemy.orm import Session
 from app.db.models.submission import Submission
 from app.schemas.submission import SubmissionSubmit
+from app.core.constants import SUBMISSION_RESULT_FAIL, SUBMISSION_RESULT_PASS
 
 
 def create_submission(submission: SubmissionSubmit, evaluation: dict, user_id: int, db: Session):
-    result = str(evaluation.get("result"))
+    raw_result = str(evaluation.get("result"))
+    result = raw_result if raw_result in (SUBMISSION_RESULT_PASS, SUBMISSION_RESULT_FAIL) else SUBMISSION_RESULT_FAIL
 
     db_submission = Submission(
         code_submitted=submission.code_submitted,
@@ -33,4 +35,4 @@ def get_submissions(
         query = query.filter(Submission.problem_id == problem_id)
     if language is not None:
         query = query.filter(Submission.language == language)
-    return query.all()
+    return query.order_by(Submission.created_at.desc()).all()

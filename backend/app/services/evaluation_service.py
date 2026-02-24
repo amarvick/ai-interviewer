@@ -19,6 +19,7 @@ import importlib.util
 import json
 import sys
 import traceback
+import typing as _typing
 
 
 def _load_module(path: str):
@@ -26,6 +27,14 @@ def _load_module(path: str):
     if spec is None or spec.loader is None:
         raise RuntimeError("Unable to load submission module")
     module = importlib.util.module_from_spec(spec)
+    # Common typing aliases so user code using List/Dict/etc annotations works
+    # even when they omit `from typing import ...`.
+    module.List = _typing.List
+    module.Dict = _typing.Dict
+    module.Tuple = _typing.Tuple
+    module.Set = _typing.Set
+    module.Optional = _typing.Optional
+    module.Any = _typing.Any
     spec.loader.exec_module(module)
     return module
 

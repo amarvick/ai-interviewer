@@ -5,20 +5,29 @@ from app.db.database import get_db
 from app.core.security import verify_token
 from app.db.models.user import User
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 def get_current_user(
-    creds: HTTPAuthorizationCredentials = Depends(security),
+    creds: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
 ):
+    if creds is None:
+        print("[AUTH] Missing Authorization header")
+        raise HTTPException(status_code=401, detail="Missing authentication credentials")
+
     user_id = verify_token(creds.credentials)
 
     if not user_id:
-        raise HTTPException(401, "Invalid token")
+        token_preview = f"{creds.credentials[:12]}..." if creds.credentials else "<empty>"
+        print(f"[AUTH] Invalid token received (preview={token_preview})")
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.query(User).filter(User.id == int(user_id)).first()
 
     if not user:
-        raise HTTPException(401)
+        print(f"[AUTH] Token resolved to user_id={user_id}, but user not found")
+        raise HTTPException(status_code=401, detail="User not found")
+
+    print(f"[AUTH] Authenticated user_id={user.id}")
 
     return user

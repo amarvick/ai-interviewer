@@ -3,6 +3,7 @@
 # Models on the other hand are what define the Postgres database tables and structures.
 # Think: Schemas are for the API layer & converting data from request/response bodies, Models are for the database layer. 
 
+from datetime import datetime
 from pydantic import BaseModel
 from app.core.constants import Language, SubmissionResult
 
@@ -25,6 +26,8 @@ class SubmissionResponse(BaseModel):
     code_submitted: str
     language: Language
     result: SubmissionResult
+    error: str | None = None
+    created_at: datetime
 
     class Config:
         orm_mode = True

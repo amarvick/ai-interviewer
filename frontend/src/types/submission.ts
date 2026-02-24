@@ -12,4 +12,5 @@ export interface SubmissionResponse {
   language: string;
   result: "pass" | "fail";
   error?: string | null;
+  created_at?: string;
 }

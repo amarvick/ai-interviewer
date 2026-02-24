@@ -28,4 +28,5 @@ def get_submissions(
 @router.post("/submission/submit", response_model=SubmissionResponse)
 def submit_submission(submission: SubmissionSubmit, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     evaluation = submit_solution(submission, db)
+    print("Evaluation result:", evaluation)
     return create_submission_record(submission, evaluation, cast(int, current_user.id), db)

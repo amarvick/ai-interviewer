@@ -2,8 +2,9 @@ interface ProblemPageEditorToolbarProps {
   selectedLanguage: string;
   handleLanguageChange: (nextLanguage: string) => void;
   languageOptions: string[];
-  setTerminalLines: React.Dispatch<React.SetStateAction<string[]>>;
-  problemTitle?: string;
+  onRun: () => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
 }
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -17,27 +18,10 @@ export default function ProblemPageEditorToolbar({
   selectedLanguage,
   handleLanguageChange,
   languageOptions,
-  setTerminalLines,
-  problemTitle,
+  onRun,
+  onSubmit,
+  isSubmitting,
 }: ProblemPageEditorToolbarProps) {
-  const runCode = () => {
-    setTerminalLines((prev) => [
-      ...prev,
-      `$ Running ${problemTitle ?? "problem"}...`,
-      "$ Done. (Runner integration pending)",
-    ]);
-    // TODO -- integrate with runner service to execute code and display results
-  };
-
-  const submitCode = () => {
-    setTerminalLines((prev) => [
-      ...prev,
-      "$ Submitting solution...",
-      "$ Submission endpoint not connected yet.",
-    ]);
-    // TODO -- integrate with submission endpoint to send code and receive feedback on test cases
-  };
-
   return (
     <div className="editor-toolbar">
       <label htmlFor="editor-language">Language</label>
@@ -54,11 +38,11 @@ export default function ProblemPageEditorToolbar({
       </select>
 
       <div className="toolbar-actions">
-        <button type="button" onClick={runCode}>
+        <button type="button" onClick={onRun}>
           Run
         </button>
-        <button type="button" onClick={submitCode}>
-          Submit
+        <button type="button" onClick={onSubmit} disabled={isSubmitting}>
+          {isSubmitting ? "Submitting..." : "Submit"}
         </button>
       </div>
     </div>

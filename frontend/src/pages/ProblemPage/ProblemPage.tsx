@@ -11,7 +11,7 @@ export default function ProblemPage() {
 
   return (
     <section className="problem-workspace" aria-label="Coding workspace">
-      {/* TODO - consider skeleton outline instead */}
+      {/* TODO - consider skeleton outline later */}
       {isLoading && <p className="status-line">Loading problem...</p>}
       {isError && (
         <p className="status-line error">
@@ -26,7 +26,7 @@ export default function ProblemPage() {
           maxPrimarySize={72}
           className="problem-layout"
           primary={<ProblemPageDescription problem={data} />}
-          secondary={<ProblemPageEditor problem={data} />} // HERE - want to get attempts as well. TODO - query these in useProblemQuery
+          secondary={<ProblemPageEditor problem={data} />}
         />
       )}
     </section>

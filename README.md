@@ -6,3 +6,7 @@ Commands:
   - /docs: FastAPI APIs
 - `.venv/bin/python -m pip install <package>`to download any packages
 - `docker exec -it ai_interviewer_db psql -U postgres -d ai_interviewer` To view db via command line
+
+TODOS:
+
+- ProblemPageEditor/ProblemPageTerminal can be shorter. Move functions to utils
