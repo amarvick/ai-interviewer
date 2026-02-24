@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 
 class TestCaseCreate(BaseModel):
-    problem_id: int
+    problem_id: str
     params: Any
     expected_output: Any
     is_hidden: bool = False
@@ -11,7 +11,7 @@ class TestCaseCreate(BaseModel):
 
 class TestCaseResponse(BaseModel):
     id: int
-    problem_id: int
+    problem_id: str
     params: Any
     expected_output: Any
     is_hidden: bool

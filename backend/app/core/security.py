@@ -20,7 +20,7 @@ def verify_password(plain_password: str, stored_password_hash: str) -> bool:
     derived_key = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt, 100_000)
     return hmac.compare_digest(derived_key, expected_hash)
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {"user_id": user_id, "exp": expire}
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

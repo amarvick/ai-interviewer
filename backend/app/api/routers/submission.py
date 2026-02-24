@@ -15,12 +15,12 @@ router = APIRouter()
 def get_submissions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    problem_id: int | None = None,
+    problem_id: str | None = None,
     language: Language | None = None,
 ):
     return get_submission_records(
         db=db,
-        user_id=cast(int, current_user.id),
+        user_id=cast(str, current_user.id),
         problem_id=problem_id,
         language=language,
     )
@@ -28,4 +28,4 @@ def get_submissions(
 @router.post("/submission/submit", response_model=SubmissionResponse)
 def submit_submission(submission: SubmissionSubmit, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     evaluation = submit_solution(submission, db)
-    return create_submission_record(submission, evaluation, cast(int, current_user.id), db)
+    return create_submission_record(submission, evaluation, cast(str, current_user.id), db)

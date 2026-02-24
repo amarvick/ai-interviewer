@@ -13,5 +13,5 @@ def create_testcase_route(testcase: TestCaseCreate, db: Session = Depends(get_db
 
 
 @router.get("/problems/{problem_id}/testcases", response_model=list[TestCaseResponse])
-def get_testcases_by_problem(problem_id: int, db: Session = Depends(get_db)):
+def get_testcases_by_problem(problem_id: str, db: Session = Depends(get_db)):
     return get_testcases_by_problem_id(db, problem_id)

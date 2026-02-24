@@ -14,5 +14,5 @@ def create_testcase(testcase: TestCaseCreate, db: Session):
     db.refresh(db_testcase)
     return db_testcase
 
-def get_testcases_by_problem_id(db: Session, problem_id: int):
+def get_testcases_by_problem_id(db: Session, problem_id: str):
     return db.query(TestCase).filter(TestCase.problem_id == problem_id).all()

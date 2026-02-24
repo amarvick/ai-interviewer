@@ -7,21 +7,21 @@ from pydantic import BaseModel
 from app.core.constants import Language, SubmissionResult
 
 class SubmissionSubmit(BaseModel):
-    problem_id: int
+    problem_id: str
     code_submitted: str
     language: Language
 
 class SubmissionCreate(BaseModel):
-    user_id: int
-    problem_id: int
+    user_id: str
+    problem_id: str
     code_submitted: str
     language: Language
     result: SubmissionResult
 
 class SubmissionResponse(BaseModel):
-    id: int
-    user_id: int
-    problem_id: int
+    id: str
+    user_id: str
+    problem_id: str
     code_submitted: str
     language: Language
     result: SubmissionResult
