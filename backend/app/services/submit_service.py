@@ -18,8 +18,6 @@ def submit_solution(submission: SubmissionSubmit, db):
         )
 
     db_test_cases = get_testcases_by_problem_id(db, submission.problem_id)
-    print("******************************* EVALUATING SUBMISSION *******************************")
-    print(submission.code_submitted)
     result = evaluation_service.evaluate_submission(
         code_submitted=submission.code_submitted,
         language=submission.language,
