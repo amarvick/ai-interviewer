@@ -19,5 +19,5 @@ class Problem(Base):
     problem_list_links = relationship("ProblemListProblem", back_populates="problem", cascade="all, delete-orphan")
     # This is the relationship to the other object, where secondary has to be the name of middleman table.
     problem_lists = relationship("ProblemList", secondary="problem_list_problems", back_populates="problems")
-    attempts = relationship("Attempt", back_populates="problem")
+    submissions = relationship("Submission", back_populates="problem")
     testcases = relationship("TestCase", back_populates="problem", cascade="all, delete-orphan")

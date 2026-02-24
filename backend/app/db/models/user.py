@@ -12,4 +12,4 @@ class User(Base):
     password_hash = Column(String(128), nullable=False)
     created_at= Column(DateTime, default=datetime.utcnow)
 
-    attempts = relationship("Attempt", back_populates="user")
+    submissions = relationship("Submission", back_populates="user")
