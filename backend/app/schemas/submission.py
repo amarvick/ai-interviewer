@@ -12,13 +12,6 @@ class SubmissionSubmit(BaseModel):
     code_submitted: str
     language: Language
 
-class SubmissionCreate(BaseModel):
-    user_id: int
-    problem_id: str
-    code_submitted: str
-    language: Language
-    result: SubmissionResult
-
 class SubmissionResponse(BaseModel):
     id: int
     user_id: int

@@ -6,14 +6,6 @@
 from pydantic import BaseModel, Field
 from app.schemas.testcase import TestCasePublicResponse
 
-class ProblemCreate(BaseModel):
-    id: str | None = None
-    title: str
-    description: str
-    difficulty: str
-    category: str
-    starter_code: dict[str, str] | None = None
-
 class ProblemResponse(BaseModel):
     id: str
     title: str
@@ -25,10 +17,6 @@ class ProblemResponse(BaseModel):
 
     class Config:
         orm_mode = True
-
-class ProblemListCreate(BaseModel):
-    name: str
-    icon_url: str
 
 class ProblemListResponse(BaseModel):
     id: str

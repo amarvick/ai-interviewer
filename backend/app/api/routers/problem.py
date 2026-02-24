@@ -2,13 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.schemas.problem import (
-    ProblemCreate,
     ProblemListProblemsResponse,
     ProblemListResponse,
     ProblemResponse,
 )
 from app.crud.problem import (
-    create_problem as create_problem_record,
     get_problem_lists as get_problem_list_records,
     get_problems_from_problem_list as get_problems_from_problem_list_record,
     get_problem_list_name_by_id,
@@ -17,10 +15,6 @@ from app.crud.problem import (
 from app.crud.testcase import get_public_testcases_by_problem_id
 
 router = APIRouter()
-
-@router.post("/problem", response_model=ProblemResponse)
-def create_problem(problem: ProblemCreate, db: Session = Depends(get_db)):
-    return create_problem_record(problem, db)
 
 @router.get("/problem-lists", response_model=list[ProblemListResponse])
 def get_problem_lists(db: Session = Depends(get_db)):

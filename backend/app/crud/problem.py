@@ -2,24 +2,6 @@ from sqlalchemy.orm import Session
 from app.db.models.problem import Problem
 from app.db.models.problem_list import ProblemList
 from app.db.models.problem_list_problem import ProblemListProblem
-from app.schemas.problem import ProblemCreate
-
-def create_problem(problem: ProblemCreate, db: Session):
-    db_problem_kwargs = dict(
-        title=problem.title,
-        description=problem.description,
-        difficulty=problem.difficulty,
-        category=problem.category,
-        starter_code=problem.starter_code or {},
-    )
-    if problem.id is not None:
-        db_problem_kwargs["id"] = problem.id
-
-    db_problem = Problem(**db_problem_kwargs)
-    db.add(db_problem)
-    db.commit()
-    db.refresh(db_problem)
-    return db_problem 
 
 # For problem page
 def get_problem_by_id(db, problem_id: str):
