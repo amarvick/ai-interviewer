@@ -4,16 +4,18 @@
 # Think: Schemas are for the API layer & converting data from request/response bodies, Models are for the database layer. 
 
 from pydantic import BaseModel
-from app.core.constants import SubmissionResult
+from app.core.constants import Language, SubmissionResult
 
 class SubmissionSubmit(BaseModel):
     problem_id: int
     code_submitted: str
+    language: Language
 
 class SubmissionCreate(BaseModel):
     user_id: int
     problem_id: int
     code_submitted: str
+    language: Language
     result: SubmissionResult
 
 class SubmissionResponse(BaseModel):
@@ -21,6 +23,7 @@ class SubmissionResponse(BaseModel):
     user_id: int
     problem_id: int
     code_submitted: str
+    language: Language
     result: SubmissionResult
 
     class Config:

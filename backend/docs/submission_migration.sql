@@ -36,5 +36,35 @@ BEGIN
     END IF;
 END $$;
 
-COMMIT;
+-- Ensure submissions.language exists for code execution/runtime selection.
+DO $$
+BEGIN
+    IF to_regclass('public.submissions') IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'public'
+             AND table_name = 'submissions'
+             AND column_name = 'language'
+       ) THEN
+        EXECUTE 'ALTER TABLE submissions ADD COLUMN language VARCHAR(20)';
+        EXECUTE 'UPDATE submissions SET language = ''python'' WHERE language IS NULL';
+        EXECUTE 'ALTER TABLE submissions ALTER COLUMN language SET NOT NULL';
+    END IF;
+END $$;
 
+DO $$
+BEGIN
+    IF to_regclass('public.ix_submissions_language') IS NULL
+       AND EXISTS (
+           SELECT 1
+           FROM information_schema.columns
+           WHERE table_schema = 'public'
+             AND table_name = 'submissions'
+             AND column_name = 'language'
+       ) THEN
+        EXECUTE 'CREATE INDEX ix_submissions_language ON submissions (language)';
+    END IF;
+END $$;
+
+COMMIT;

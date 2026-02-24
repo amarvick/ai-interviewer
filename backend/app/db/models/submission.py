@@ -12,6 +12,7 @@ class Submission(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False)
     code_submitted = Column(Text, nullable=False) # Code submitted by the user for this submission
+    language = Column(String(20), nullable=False, index=True)
     result = Column(String(20), nullable=False)  # e.g., "pass", "fail"
     created_at = Column(DateTime, default=datetime.utcnow)
     error = Column(Text, nullable=True)
