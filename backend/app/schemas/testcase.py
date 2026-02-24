@@ -18,3 +18,12 @@ class TestCaseResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class TestCasePublicResponse(BaseModel):
+    id: int
+    params: Any
+    expected_output: Any
+
+    class Config:
+        orm_mode = True

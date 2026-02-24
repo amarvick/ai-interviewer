@@ -3,7 +3,7 @@ from app.db.models.submission import Submission
 from app.schemas.submission import SubmissionSubmit
 
 
-def create_submission(submission: SubmissionSubmit, evaluation: dict, user_id: str, db: Session):
+def create_submission(submission: SubmissionSubmit, evaluation: dict, user_id: int, db: Session):
     result = str(evaluation.get("result"))
 
     db_submission = Submission(
@@ -22,7 +22,7 @@ def create_submission(submission: SubmissionSubmit, evaluation: dict, user_id: s
 
 def get_submissions(
     db: Session,
-    user_id: str | None = None,
+    user_id: int | None = None,
     problem_id: str | None = None,
     language: str | None = None,
 ):

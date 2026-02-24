@@ -1,12 +1,18 @@
-from sqlalchemy import Column, Integer, Text, String, DateTime, JSON
+from uuid import uuid4
+from sqlalchemy import Column, Text, String, DateTime, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
 
+
+def generate_problem_id() -> str:
+    return f"problem_{uuid4().hex[:12]}"
+
+
 class Problem(Base):
     __tablename__ = "problems"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(64), primary_key=True, index=True, default=generate_problem_id)
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     category = Column(String(50), index=True, nullable=False)

@@ -26,7 +26,7 @@ export default function ProblemPage() {
           maxPrimarySize={72}
           className="problem-layout"
           primary={<ProblemPageDescription problem={data} />}
-          secondary={<ProblemPageEditor problem={data} />}
+          secondary={<ProblemPageEditor problem={data} />} // HERE - want to get attempts as well. TODO - query these in useProblemQuery
         />
       )}
     </section>

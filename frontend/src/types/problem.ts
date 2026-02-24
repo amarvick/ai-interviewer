@@ -1,12 +1,15 @@
+import type { TestCase } from "./testcase";
+
 export type Difficulty = "easy" | "medium" | "hard" | string;
 
 export interface Problem {
-  id: number;
+  id: string;
   title: string;
   description: string;
   difficulty: Difficulty;
   category: string;
   starter_code: Record<string, string>;
+  test_cases: TestCase[];
 }
 
 export interface ProblemList {

@@ -20,7 +20,7 @@ def get_submissions(
 ):
     return get_submission_records(
         db=db,
-        user_id=cast(str, current_user.id),
+        user_id=cast(int, current_user.id),
         problem_id=problem_id,
         language=language,
     )
@@ -28,4 +28,4 @@ def get_submissions(
 @router.post("/submission/submit", response_model=SubmissionResponse)
 def submit_submission(submission: SubmissionSubmit, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     evaluation = submit_solution(submission, db)
-    return create_submission_record(submission, evaluation, cast(str, current_user.id), db)
+    return create_submission_record(submission, evaluation, cast(int, current_user.id), db)

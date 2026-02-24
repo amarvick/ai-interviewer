@@ -14,6 +14,7 @@ from app.crud.problem import (
     get_problem_list_name_by_id,
     get_problem_by_id as get_problem_by_id_record,
 )
+from app.crud.testcase import get_public_testcases_by_problem_id
 
 router = APIRouter()
 
@@ -39,4 +40,6 @@ def get_problem_by_id(problem_id: str, db: Session = Depends(get_db)):
     problem = get_problem_by_id_record(db, problem_id)
     if problem is None:
         raise HTTPException(status_code=404, detail="Problem not found")
+    test_cases = get_public_testcases_by_problem_id(db, problem_id)
+    problem.test_cases = test_cases
     return problem

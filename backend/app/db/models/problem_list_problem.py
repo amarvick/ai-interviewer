@@ -11,7 +11,7 @@ class ProblemListProblem(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     problem_list_id = Column(String, ForeignKey("problem_lists.id"), nullable=False)
-    problem_id = Column(Integer, ForeignKey("problems.id"), nullable=False)
+    problem_id = Column(String(64), ForeignKey("problems.id"), nullable=False)
 
     problem_list = relationship("ProblemList", back_populates="problem_links")
     problem = relationship("Problem", back_populates="problem_list_links")   
