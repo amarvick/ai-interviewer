@@ -29,7 +29,11 @@ export default function SplitPane({
 }: SplitPaneProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [primarySize, setPrimarySize] = useState(
+<<<<<<< HEAD
     clamp(defaultPrimarySize, minPrimarySize, maxPrimarySize),
+=======
+    clamp(defaultPrimarySize, minPrimarySize, maxPrimarySize)
+>>>>>>> recovery-branch-new-css
   );
 
   const updateSizeFromPointer = useCallback(
@@ -49,7 +53,11 @@ export default function SplitPane({
       const next = ((clientY - rect.top) / rect.height) * 100;
       setPrimarySize(clamp(next, minPrimarySize, maxPrimarySize));
     },
+<<<<<<< HEAD
     [maxPrimarySize, minPrimarySize, orientation],
+=======
+    [maxPrimarySize, minPrimarySize, orientation]
+>>>>>>> recovery-branch-new-css
   );
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -75,18 +83,37 @@ export default function SplitPane({
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const step = 2;
+<<<<<<< HEAD
     const decreaseKeys = orientation === "vertical" ? ["ArrowLeft"] : ["ArrowUp"];
     const increaseKeys = orientation === "vertical" ? ["ArrowRight"] : ["ArrowDown"];
 
     if (decreaseKeys.includes(event.key)) {
       event.preventDefault();
       setPrimarySize((prev) => clamp(prev - step, minPrimarySize, maxPrimarySize));
+=======
+    const decreaseKeys =
+      orientation === "vertical" ? ["ArrowLeft"] : ["ArrowUp"];
+    const increaseKeys =
+      orientation === "vertical" ? ["ArrowRight"] : ["ArrowDown"];
+
+    if (decreaseKeys.includes(event.key)) {
+      event.preventDefault();
+      setPrimarySize((prev) =>
+        clamp(prev - step, minPrimarySize, maxPrimarySize)
+      );
+>>>>>>> recovery-branch-new-css
       return;
     }
 
     if (increaseKeys.includes(event.key)) {
       event.preventDefault();
+<<<<<<< HEAD
       setPrimarySize((prev) => clamp(prev + step, minPrimarySize, maxPrimarySize));
+=======
+      setPrimarySize((prev) =>
+        clamp(prev + step, minPrimarySize, maxPrimarySize)
+      );
+>>>>>>> recovery-branch-new-css
       return;
     }
 
@@ -105,7 +132,13 @@ export default function SplitPane({
   return (
     <div
       ref={containerRef}
+<<<<<<< HEAD
       className={`split-pane split-pane--${orientation}${className ? ` ${className}` : ""}`}
+=======
+      className={`split-pane split-pane--${orientation}${
+        className ? ` ${className}` : ""
+      }`}
+>>>>>>> recovery-branch-new-css
       style={{ ["--primary-size" as string]: `${primarySize}%` }}
     >
       <div className="split-pane-primary">{primary}</div>
@@ -117,7 +150,15 @@ export default function SplitPane({
         aria-valuemin={minPrimarySize}
         aria-valuemax={maxPrimarySize}
         aria-valuenow={Math.round(primarySize)}
+<<<<<<< HEAD
         aria-label={orientation === "vertical" ? "Resize panels horizontally" : "Resize panels vertically"}
+=======
+        aria-label={
+          orientation === "vertical"
+            ? "Resize panels horizontally"
+            : "Resize panels vertically"
+        }
+>>>>>>> recovery-branch-new-css
         tabIndex={0}
         onPointerDown={onPointerDown}
         onKeyDown={onKeyDown}

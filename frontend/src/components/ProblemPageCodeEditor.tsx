@@ -1,4 +1,5 @@
 import Editor, { type BeforeMount } from "@monaco-editor/react";
+<<<<<<< HEAD
 import "./ProblemPageCodeEditor.css";
 
 // TODO - Rework this file later. For now, just want to get something functional in place.
@@ -17,6 +18,13 @@ interface ProblemPageCodeEditorProps {
   onCodeChange: (value: string | undefined) => void;
   onRun: () => void;
   onSubmit: () => void;
+=======
+
+interface ProblemPageCodeEditorProps {
+  selectedLanguage: string;
+  updateCode: (value: string | undefined) => void;
+  code: string;
+>>>>>>> recovery-branch-new-css
 }
 
 const defineTheme: BeforeMount = (monaco) => {
@@ -47,6 +55,7 @@ const defineTheme: BeforeMount = (monaco) => {
 
 export default function ProblemPageCodeEditor({
   selectedLanguage,
+<<<<<<< HEAD
   languageOptions,
   code,
   onLanguageChange,
@@ -100,5 +109,30 @@ export default function ProblemPageCodeEditor({
         />
       </div>
     </section>
+=======
+  updateCode,
+  code,
+}: ProblemPageCodeEditorProps) {
+  return (
+    <div className="editor-monaco-wrap">
+      <Editor
+        height="100%"
+        language={selectedLanguage}
+        theme="ai-interviewer-violet"
+        value={code}
+        beforeMount={defineTheme}
+        onChange={updateCode}
+        options={{
+          fontSize: 14,
+          autoClosingBrackets: "languageDefined",
+          minimap: { enabled: false },
+          tabSize: 4,
+          insertSpaces: true,
+          smoothScrolling: true,
+          padding: { top: 10 },
+        }}
+      />
+    </div>
+>>>>>>> recovery-branch-new-css
   );
 }

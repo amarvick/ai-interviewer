@@ -5,9 +5,12 @@
   height: 250px;
   min-height: 250px;
   max-height: 250px;
+<<<<<<< HEAD
   border: 1px solid rgba(132, 153, 219, 0.28);
   border-radius: 14px;
   background: rgba(8, 13, 28, 0.82);
+=======
+>>>>>>> recovery-branch-new-css
 }
 
 .terminal-header {
