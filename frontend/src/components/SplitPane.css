@@ -5,14 +5,10 @@
 }
 
 .split-pane--vertical {
-<<<<<<< HEAD
-  grid-template-columns: minmax(280px, var(--primary-size)) 10px minmax(340px, 1fr);
-=======
   grid-template-columns: minmax(280px, var(--primary-size)) 10px minmax(
       340px,
       1fr
     );
->>>>>>> recovery-branch-new-css
   align-items: stretch;
 }
 
