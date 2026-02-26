@@ -2,7 +2,7 @@ from typing import Any
 from pydantic import BaseModel
 
 class TestCasePublicResponse(BaseModel):
-    id: int
+    id: str
     params: Any
     expected_output: Any
 

@@ -22,7 +22,7 @@ def get_current_user(
         print(f"[AUTH] Invalid token received (preview={token_preview})")
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
         print(f"[AUTH] Token resolved to user_id={user_id}, but user not found")
@@ -44,5 +44,5 @@ def get_current_user_optional(
     if not user_id:
         return None
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == user_id).first()
     return user

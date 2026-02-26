@@ -10,6 +10,7 @@ Adds `user_problems` to track completion/progress per `(user_id, problem_id)`.
 - `first_passed_at` nullable datetime
 - `last_submission_at` datetime
 - `last_submission_id` nullable FK -> `submissions.id`
+- all IDs/FKs are string IDs (`varchar(64)`)
 - unique `(user_id, problem_id)`
 
 ## Apply
@@ -43,4 +44,3 @@ On every submit:
    - on pass:
      - sets `is_passed = true`
      - sets `first_passed_at` only if it was `NULL`
-

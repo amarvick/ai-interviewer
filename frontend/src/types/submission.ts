@@ -5,8 +5,8 @@ export interface SubmissionPayload {
 }
 
 export interface SubmissionResponse {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   problem_id: string;
   code_submitted: string;
   language: string;

@@ -38,7 +38,7 @@ def get_problems_from_problem_list(
     if current_user is not None:
         passed_problem_ids = get_passed_problem_ids_for_user(
             db=db,
-            user_id=int(current_user.id),
+            user_id=current_user.id,
             problem_ids=[problem.id for problem in problems],
         )
     for problem in problems:

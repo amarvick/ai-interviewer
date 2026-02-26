@@ -7,7 +7,7 @@ type TestCaseStatus = "pending" | "pass" | "fail";
 
 interface ProblemPageTerminalProps {
   testCases: TestCase[];
-  testCaseStatuses: Record<number, TestCaseStatus>;
+  testCaseStatuses: Record<string, TestCaseStatus>;
   submissions: SubmissionResponse[];
   hasSubmittedInSession: boolean;
   sessionErrors: string[];

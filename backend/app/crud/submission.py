@@ -6,7 +6,7 @@ from app.schemas.submission import SubmissionSubmit
 from app.core.constants import SUBMISSION_RESULT_FAIL, SUBMISSION_RESULT_PASS
 
 
-def create_submission(submission: SubmissionSubmit, evaluation: dict, user_id: int, db: Session):
+def create_submission(submission: SubmissionSubmit, evaluation: dict, user_id: str, db: Session):
     raw_result = str(evaluation.get("result"))
     result = raw_result if raw_result in (SUBMISSION_RESULT_PASS, SUBMISSION_RESULT_FAIL) else SUBMISSION_RESULT_FAIL
 
@@ -38,7 +38,7 @@ def create_submission(submission: SubmissionSubmit, evaluation: dict, user_id: i
 
 def get_submissions(
     db: Session,
-    user_id: int | None = None,
+    user_id: str | None = None,
     problem_id: str | None = None,
     language: str | None = None,
 ):
@@ -54,9 +54,9 @@ def get_submissions(
 
 def _upsert_user_problem_progress(
     db: Session,
-    user_id: int,
+    user_id: str,
     problem_id: str,
-    submission_id: int | None,
+    submission_id: str | None,
     submission_time: datetime,
     did_pass: bool,
 ):

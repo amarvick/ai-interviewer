@@ -32,13 +32,13 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
   const [hasSubmittedInSession, setHasSubmittedInSession] = useState(false);
   const [sessionErrors, setSessionErrors] = useState<string[]>([]);
   const [testCaseStatuses, setTestCaseStatuses] = useState<
-    Record<number, TestCaseStatus>
+    Record<string, TestCaseStatus>
   >({});
   const [isSolvedModalOpen, setIsSolvedModalOpen] = useState(false);
 
   useEffect(() => {
     const nextStatuses = problem.test_cases.reduce<
-      Record<number, TestCaseStatus>
+      Record<string, TestCaseStatus>
     >((acc, testCase) => {
       acc[testCase.id] = "pending";
       return acc;
@@ -90,13 +90,13 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
       setTestCaseStatuses((prev) => {
         if (response.result === "pass") {
           return Object.fromEntries(
-            Object.keys(prev).map((id) => [Number(id), "pass"])
-          ) as Record<number, TestCaseStatus>;
+            Object.keys(prev).map((id) => [id, "pass"])
+          ) as Record<string, TestCaseStatus>;
         }
 
         const next = Object.fromEntries(
-          Object.keys(prev).map((id) => [Number(id), "pending"])
-        ) as Record<number, TestCaseStatus>;
+          Object.keys(prev).map((id) => [id, "pending"])
+        ) as Record<string, TestCaseStatus>;
 
         const failedCaseIndex = parseFailedCaseIndex(response.error);
         if (failedCaseIndex === null) {
@@ -128,8 +128,8 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
       setTestCaseStatuses(
         (prev) =>
           Object.fromEntries(
-            Object.keys(prev).map((id) => [Number(id), "fail"])
-          ) as Record<number, TestCaseStatus>
+            Object.keys(prev).map((id) => [id, "fail"])
+          ) as Record<string, TestCaseStatus>
       );
     } finally {
       setIsSubmitting(false);

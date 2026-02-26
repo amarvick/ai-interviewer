@@ -28,7 +28,7 @@ def get_problems_from_problem_list(db: Session, problem_list_id: str):
 
 def get_passed_problem_ids_for_user(
     db: Session,
-    user_id: int,
+    user_id: str,
     problem_ids: list[str],
 ) -> set[str]:
     if not problem_ids:
