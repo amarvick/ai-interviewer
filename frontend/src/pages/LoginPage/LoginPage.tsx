@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../../services/api";
-import { setAuthToken } from "../../services/auth";
+import { isAuthenticated, onAuthChanged, setAuthToken } from "../../services/auth";
 import "./LoginPage.css";
 
 export default function LoginPage() {
@@ -11,6 +11,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const redirectIfAuthenticated = () => {
+      if (isAuthenticated()) {
+        navigate("/", { replace: true });
+      }
+    };
+
+    redirectIfAuthenticated();
+    return onAuthChanged(redirectIfAuthenticated);
+  }, [navigate]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

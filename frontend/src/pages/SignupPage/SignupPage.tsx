@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register } from "../../services/api";
+import { isAuthenticated, onAuthChanged } from "../../services/auth";
 import "./SignupPage.css";
 
 export default function SignupPage() {
@@ -11,6 +12,17 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const redirectIfAuthenticated = () => {
+      if (isAuthenticated()) {
+        navigate("/", { replace: true });
+      }
+    };
+
+    redirectIfAuthenticated();
+    return onAuthChanged(redirectIfAuthenticated);
+  }, [navigate]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -1,32 +1,52 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ProblemListGrid from "../../components/ProblemListGrid";
 import { useProblemListsQuery } from "../../hooks/useProblemListsQuery";
+import { isAuthenticated, onAuthChanged } from "../../services/auth";
 import "./HomePage.css";
 
 export default function HomePage() {
+  const [loggedIn, setLoggedIn] = useState<boolean>(isAuthenticated());
   const {
     data: problemLists,
     isLoading,
     isError,
     error,
-  } = useProblemListsQuery();
+  } = useProblemListsQuery(loggedIn);
+
+  useEffect(() => {
+    return onAuthChanged(() => {
+      setLoggedIn(isAuthenticated());
+    });
+  }, []);
+
+  if (!loggedIn) {
+    return (
+      <div className="home-page home-page-landing">
+        <section className="hero">
+          <h1 className="hero-title">AI Interviewer</h1>
+          <p className="hero-copy">
+            Practice real coding interview problems, track your progress, and
+            sharpen your communication under pressure.
+          </p>
+          <div className="hero-actions">
+            <Link to="/login" className="hero-cta">
+              Login
+            </Link>
+            <Link to="/signup" className="hero-cta secondary">
+              Create Account
+            </Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="home-page">
-      <section className="hero">
-        <h1 className="hero-title">AI Interviewer</h1>
-        <p className="hero-copy">
-          Drill realistic coding sets, practice with time pressure, and get
-          feedback fast.
-        </p>
-        <Link to="/login" className="hero-cta">
-          Start Practicing
-        </Link>
-      </section>
-
       <section className="lists-section">
         <div className="section-header">
-          <h2>Problem Lists</h2>
+          <h2>Practice Sets</h2>
           <span>{problemLists?.length ?? 0} available</span>
         </div>
 

@@ -1,8 +1,40 @@
 const AUTH_TOKEN_KEY = "ai_interviewer_token";
 const AUTH_CHANGED_EVENT = "auth-changed";
 
+function decodeBase64Url(value: string): string {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return atob(padded);
+}
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return true;
+    }
+    const payloadText = decodeBase64Url(parts[1]);
+    const payload = JSON.parse(payloadText) as { exp?: number };
+    if (typeof payload.exp !== "number") {
+      return true;
+    }
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    return payload.exp <= nowSeconds;
+  } catch {
+    return true;
+  }
+}
+
 export function getAuthToken(): string | null {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) {
+    return null;
+  }
+  if (isTokenExpired(token)) {
+    clearAuthToken();
+    return null;
+  }
+  return token;
 }
 
 export function setAuthToken(token: string): void {
