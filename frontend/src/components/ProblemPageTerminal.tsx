@@ -68,7 +68,7 @@ export default function ProblemPageTerminal({
         {activeTab === "results" && (
           <div className="terminal-list">
             {!hasSubmittedInSession && (
-              <p className="terminal-empty">You must run your code first</p>
+              <p className="terminal-empty">You must submit your code first</p>
             )}
 
             {hasSubmittedInSession &&

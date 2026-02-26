@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Problem } from "../types/problem";
 import "./ProblemPageEditor.css";
 import ProblemPageTerminal from "./ProblemPageTerminal";
 import ProblemPageCodeEditor from "./ProblemPageCodeEditor";
 import ProblemPageEditorToolbar from "./ProblemPageEditorToolbar";
+import Modal from "./Modal";
 import type { SubmissionResponse } from "../types/submission";
 import { getSubmissions, runSubmission } from "../services/api";
 
@@ -14,6 +16,7 @@ interface ProblemPageEditorProps {
 type TestCaseStatus = "pending" | "pass" | "fail";
 
 export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
+  const navigate = useNavigate();
   const starterCode = problem?.starter_code;
   const languageOptions = useMemo(() => {
     const keys = Object.keys(starterCode);
@@ -31,6 +34,7 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
   const [testCaseStatuses, setTestCaseStatuses] = useState<
     Record<number, TestCaseStatus>
   >({});
+  const [isSolvedModalOpen, setIsSolvedModalOpen] = useState(false);
 
   useEffect(() => {
     const nextStatuses = problem.test_cases.reduce<
@@ -70,11 +74,6 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
     setCode(value ?? "");
   };
 
-  const handleRun = () => {
-    // Reserved for future local/sample run support.
-    // TODO - Implement this later
-  };
-
   const handleSubmit = async () => {
     setIsSubmitting(true);
     setHasSubmittedInSession(true);
@@ -88,19 +87,39 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
       });
 
       setSubmissions((prev) => [response, ...prev]);
-      setTestCaseStatuses(
-        (prev) =>
-          Object.fromEntries(
-            Object.keys(prev).map((id) => [
-              Number(id),
-              response.result === "pass" ? "pass" : "fail",
-            ])
-          ) as Record<number, TestCaseStatus>
-      );
+      setTestCaseStatuses((prev) => {
+        if (response.result === "pass") {
+          return Object.fromEntries(
+            Object.keys(prev).map((id) => [Number(id), "pass"])
+          ) as Record<number, TestCaseStatus>;
+        }
+
+        const next = Object.fromEntries(
+          Object.keys(prev).map((id) => [Number(id), "pending"])
+        ) as Record<number, TestCaseStatus>;
+
+        const failedCaseIndex = parseFailedCaseIndex(response.error);
+        if (failedCaseIndex === null) {
+          return next;
+        }
+
+        const orderedIds = problem.test_cases.map((testCase) => testCase.id);
+        for (let i = 0; i < orderedIds.length; i += 1) {
+          const id = orderedIds[i];
+          if (i + 1 < failedCaseIndex) {
+            next[id] = "pass";
+          } else if (i + 1 === failedCaseIndex) {
+            next[id] = "fail";
+          }
+        }
+        return next;
+      });
       if (response.result === "fail") {
         setSessionErrors([
           response.error ?? "Your latest submission failed one or more tests.",
         ]);
+      } else {
+        setIsSolvedModalOpen(true);
       }
     } catch (error) {
       const message =
@@ -124,7 +143,6 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
           selectedLanguage={selectedLanguage}
           handleLanguageChange={handleLanguageChange}
           languageOptions={languageOptions}
-          onRun={handleRun}
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
         />
@@ -143,6 +161,42 @@ export default function ProblemPageEditor({ problem }: ProblemPageEditorProps) {
         hasSubmittedInSession={hasSubmittedInSession}
         sessionErrors={sessionErrors}
       />
+
+      <Modal
+        isOpen={isSolvedModalOpen}
+        title="Nice work. You solved it."
+        description={`You passed all test cases for ${problem.title}.`}
+        onClose={() => setIsSolvedModalOpen(false)}
+        actions={[
+          {
+            label: "Keep Practicing",
+            variant: "secondary",
+            onClick: () => setIsSolvedModalOpen(false),
+          },
+          {
+            label: "Back to Home",
+            variant: "primary",
+            onClick: () => navigate("/"),
+          },
+        ]}
+      >
+        <p>
+          Your latest submission has been saved. You can review submissions in
+          the Submissions tab or move on to the next problem.
+        </p>
+      </Modal>
     </div>
   );
+}
+
+function parseFailedCaseIndex(errorText?: string | null): number | null {
+  if (!errorText) {
+    return null;
+  }
+  const match = errorText.match(/test case #(\d+)/i);
+  if (!match) {
+    return null;
+  }
+  const parsed = Number(match[1]);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }

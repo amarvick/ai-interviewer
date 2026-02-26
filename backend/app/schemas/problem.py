@@ -13,6 +13,7 @@ class ProblemResponse(BaseModel):
     difficulty: str
     category: str
     starter_code: dict[str, str]
+    is_passed: bool = False
     test_cases: list[TestCasePublicResponse] = Field(default_factory=list)
 
     class Config:

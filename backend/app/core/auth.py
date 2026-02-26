@@ -31,3 +31,18 @@ def get_current_user(
     print(f"[AUTH] Authenticated user_id={user.id}")
 
     return user
+
+
+def get_current_user_optional(
+    creds: HTTPAuthorizationCredentials | None = Depends(security),
+    db: Session = Depends(get_db),
+):
+    if creds is None:
+        return None
+
+    user_id = verify_token(creds.credentials)
+    if not user_id:
+        return None
+
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    return user

@@ -4,6 +4,7 @@ from .problem import Problem
 from .testcase import TestCase
 from .problem_list import ProblemList
 from .problem_list_problem import ProblemListProblem
+from .user_problem import UserProblem
 
 __all__ = [
     "Submission",
@@ -11,5 +12,6 @@ __all__ = [
     "Problem",
     "TestCase",
     "ProblemList",
-    "ProblemListProblem"
+    "ProblemListProblem",
+    "UserProblem",
 ]

@@ -9,6 +9,7 @@ interface ProblemCardProps {
 export default function ProblemCard({ problem }: ProblemCardProps) {
   const category = problem.category.trim();
   const difficulty = String(problem.difficulty).trim();
+  const isPassed = Boolean(problem.is_passed);
 
   return (
     <Link
@@ -16,6 +17,12 @@ export default function ProblemCard({ problem }: ProblemCardProps) {
       className="problem-card"
       aria-label={`${problem.title}. ${category} problem. ${difficulty} difficulty.`}
     >
+      <span
+        className={isPassed ? "problem-status-indicator passed" : "problem-status-indicator"}
+        aria-label={isPassed ? "Solved problem" : "Unsolved problem"}
+      >
+        {isPassed ? "✓" : ""}
+      </span>
       <span className="problem-card-title">{problem.title}</span>
       <span
         className="problem-card-meta"

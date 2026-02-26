@@ -26,4 +26,5 @@ class Problem(Base):
     # This is the relationship to the other object, where secondary has to be the name of middleman table.
     problem_lists = relationship("ProblemList", secondary="problem_list_problems", back_populates="problems")
     submissions = relationship("Submission", back_populates="problem")
+    user_problems = relationship("UserProblem", back_populates="problem", cascade="all, delete-orphan")
     testcases = relationship("TestCase", back_populates="problem", cascade="all, delete-orphan")

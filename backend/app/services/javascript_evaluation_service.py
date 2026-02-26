@@ -84,7 +84,7 @@ function unpackParams(params) {
   return [params];
 }
 
-function main() {
+async function main() {
   const submissionPath = process.argv[2];
   const testcasePath = process.argv[3];
 
@@ -95,7 +95,7 @@ function main() {
     const submissionModule = loadSubmission(submissionPath);
     const callable = pickCallable(submissionModule);
     const args = unpackParams(params);
-    const output = callable(...args);
+    const output = await Promise.resolve(callable(...args));
 
     console.log(JSON.stringify({ ok: true, output }));
   } catch (error) {
@@ -159,7 +159,7 @@ def evaluate_javascript_submission(code_submitted: str, test_cases: list):
                 }
 
             try:
-                runner_result = json.loads(stdout)
+                runner_result = _parse_runner_output(stdout)
             except json.JSONDecodeError:
                 return {
                     "result": SUBMISSION_RESULT_FAIL,
@@ -198,3 +198,9 @@ def _outputs_match(actual: Any, expected: Any) -> bool:
         return abs(float(actual) - float(expected)) < 1e-9
     return False
 
+
+def _parse_runner_output(stdout: str) -> dict[str, Any]:
+    lines = [line for line in stdout.splitlines() if line.strip()]
+    if not lines:
+        raise json.JSONDecodeError("empty output", "", 0)
+    return json.loads(lines[-1])

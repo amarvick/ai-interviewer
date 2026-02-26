@@ -147,7 +147,7 @@ def evaluate_python_submission(code_submitted: str, test_cases: list):
                 }
 
             try:
-                runner_result = json.loads(stdout)
+                runner_result = _parse_runner_output(stdout)
             except json.JSONDecodeError:
                 return {
                     "result": SUBMISSION_RESULT_FAIL,
@@ -185,3 +185,10 @@ def _outputs_match(actual: Any, expected: Any) -> bool:
     if isinstance(actual, (int, float)) and isinstance(expected, (int, float)):
         return abs(float(actual) - float(expected)) < 1e-9
     return False
+
+
+def _parse_runner_output(stdout: str) -> dict[str, Any]:
+    lines = [line for line in stdout.splitlines() if line.strip()]
+    if not lines:
+        raise json.JSONDecodeError("empty output", "", 0)
+    return json.loads(lines[-1])

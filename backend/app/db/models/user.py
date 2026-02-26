@@ -13,3 +13,4 @@ class User(Base):
     created_at= Column(DateTime, default=datetime.utcnow)
 
     submissions = relationship("Submission", back_populates="user")
+    user_problems = relationship("UserProblem", back_populates="user", cascade="all, delete-orphan")

@@ -9,6 +9,7 @@ export interface Problem {
   difficulty: Difficulty;
   category: string;
   starter_code: Record<string, string>;
+  is_passed?: boolean;
   test_cases: TestCase[];
 }
 

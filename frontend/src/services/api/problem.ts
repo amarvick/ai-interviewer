@@ -4,6 +4,12 @@ import type {
   ProblemListProblemsResponse,
 } from "../../types/problem";
 import { API_BASE_URL, parseJson } from "./api";
+import { getAuthToken } from "../auth";
+
+function authHeaders(): HeadersInit {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export async function getProblemLists(): Promise<ProblemList[]> {
   const response = await fetch(`${API_BASE_URL}/problem-lists`);
@@ -13,7 +19,11 @@ export async function getProblemLists(): Promise<ProblemList[]> {
 export async function getProblemsByProblemListId(
   problemListId: string
 ): Promise<ProblemListProblemsResponse> {
-  const response = await fetch(`${API_BASE_URL}/problems/${problemListId}`);
+  const response = await fetch(`${API_BASE_URL}/problems/${problemListId}`, {
+    headers: {
+      ...authHeaders(),
+    },
+  });
   return parseJson<ProblemListProblemsResponse>(response);
 }
 
