@@ -10,5 +10,4 @@ Commands:
 TODOS:
 
 - ProblemPageEditor/ProblemPageTerminal can be shorter. Move functions to utils
-- Home page should be a public landing page for users who are not signed up/logged in.
-- If the auth token is expired/invalid, treat the user as logged out (especially on returning to Home) and clear local auth state to prevent false "logged in" UI and 401 loops.
+-

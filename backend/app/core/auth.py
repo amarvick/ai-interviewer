@@ -12,7 +12,6 @@ def get_current_user(
     db: Session = Depends(get_db),
 ):
     if creds is None:
-        print("[AUTH] Missing Authorization header")
         raise HTTPException(status_code=401, detail="Missing authentication credentials")
 
     user_id = verify_token(creds.credentials)

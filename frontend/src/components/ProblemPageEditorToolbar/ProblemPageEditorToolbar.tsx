@@ -4,6 +4,8 @@ interface ProblemPageEditorToolbarProps {
   languageOptions: string[];
   onSubmit: () => void;
   isSubmitting: boolean;
+  submitLabel?: string;
+  submittingLabel?: string;
 }
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -19,6 +21,8 @@ export default function ProblemPageEditorToolbar({
   languageOptions,
   onSubmit,
   isSubmitting,
+  submitLabel = "Submit",
+  submittingLabel = "Submitting...",
 }: ProblemPageEditorToolbarProps) {
   return (
     <div className="editor-toolbar">
@@ -37,7 +41,7 @@ export default function ProblemPageEditorToolbar({
 
       <div className="toolbar-actions">
         <button type="button" onClick={onSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Submitting..." : "Submit"}
+          {isSubmitting ? submittingLabel : submitLabel}
         </button>
       </div>
     </div>

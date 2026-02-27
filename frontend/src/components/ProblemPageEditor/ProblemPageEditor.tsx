@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Problem } from "../types/problem";
+import type { Problem } from "../../types/problem";
 import "./ProblemPageEditor.css";
-import ProblemPageTerminal from "./ProblemPageTerminal";
-import ProblemPageCodeEditor from "./ProblemPageCodeEditor";
-import ProblemPageEditorToolbar from "./ProblemPageEditorToolbar";
-import Modal from "./Modal";
-import type { SubmissionResponse } from "../types/submission";
-import { getSubmissions, runSubmission } from "../services/api";
+import ProblemPageTerminal from "../ProblemPageTerminal/ProblemPageTerminal";
+import ProblemPageCodeEditor from "../ProblemPageCodeEditor/ProblemPageCodeEditor";
+import ProblemPageEditorToolbar from "../ProblemPageEditorToolbar/ProblemPageEditorToolbar";
+import Modal from "../Modal/Modal";
+import type { SubmissionResponse } from "../../types/submission";
+import { getSubmissions, runSubmission } from "../../services/api";
 
 interface ProblemPageEditorProps {
   problem: Problem;

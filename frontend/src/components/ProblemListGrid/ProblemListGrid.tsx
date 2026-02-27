@@ -1,5 +1,5 @@
-import ProblemListCard from "./ProblemListCard";
-import type { ProblemList } from "../types/problem";
+import ProblemListCard from "../ProblemListCard/ProblemListCard";
+import type { ProblemList } from "../../types/problem";
 import "./ProblemListGrid.css";
 
 interface ProblemListGridProps {

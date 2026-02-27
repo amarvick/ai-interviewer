@@ -1,14 +1,14 @@
 import { useParams } from "react-router-dom";
+import InterviewPageEditor from "../../components/InterviewPageEditor/InterviewPageEditor";
 import ProblemWorkspace from "../../components/ProblemWorkspace/ProblemWorkspace";
-import ProblemPageEditor from "../../components/ProblemPageEditor/ProblemPageEditor";
 
-export default function ProblemPage() {
+export default function InterviewPage() {
   const { id } = useParams();
 
   return (
     <ProblemWorkspace
       problemId={id ?? ""}
-      secondary={(problem) => <ProblemPageEditor problem={problem} />}
+      secondary={(problem) => <InterviewPageEditor problem={problem} />}
     />
   );
 }

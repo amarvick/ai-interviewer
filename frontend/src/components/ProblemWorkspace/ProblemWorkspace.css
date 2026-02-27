@@ -26,21 +26,6 @@
   min-height: 0;
 }
 
-.problem-layout > .split-pane-primary {
-  min-height: 0;
-  display: flex;
-}
-
-.problem-layout > .split-pane-secondary {
-  display: flex;
-  min-height: 0;
-}
-
-.problem-layout > .split-pane-secondary > * {
-  flex: 1;
-  min-height: 0;
-}
-
 .problem-panel {
   border: 1px solid rgba(132, 153, 219, 0.28);
   border-radius: 14px;

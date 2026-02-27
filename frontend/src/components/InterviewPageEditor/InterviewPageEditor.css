@@ -1,0 +1,93 @@
+.interview-editor-stack {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 280px;
+  gap: 0.55rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.interview-chat-panel {
+  border: 1px solid rgba(132, 153, 219, 0.28);
+  border-radius: 14px;
+  background: rgba(8, 13, 28, 0.82);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 280px;
+}
+
+.interview-chat-header {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(132, 153, 219, 0.22);
+  color: #d7e4ff;
+  font-weight: 600;
+  background: rgba(10, 16, 34, 0.92);
+}
+
+.interview-chat-messages {
+  overflow: auto;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.chat-bubble {
+  border: 1px solid rgba(132, 153, 219, 0.25);
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  background: rgba(12, 19, 39, 0.82);
+  color: #d0ddff;
+}
+
+.chat-bubble.ai {
+  border-color: rgba(113, 153, 255, 0.32);
+}
+
+.chat-bubble.you {
+  border-color: rgba(66, 213, 166, 0.35);
+  background: rgba(8, 28, 28, 0.72);
+}
+
+.chat-bubble-role {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  color: #9ab1ea;
+}
+
+.chat-bubble p {
+  margin: 0;
+}
+
+.interview-chat-input-wrap {
+  border-top: 1px solid rgba(132, 153, 219, 0.22);
+  padding: 0.65rem;
+  background: rgba(10, 16, 34, 0.92);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+}
+
+.interview-chat-input-wrap textarea {
+  border: 1px solid rgba(132, 153, 219, 0.35);
+  border-radius: 8px;
+  background: rgba(5, 11, 24, 0.8);
+  color: #eff3ff;
+  padding: 0.45rem 0.55rem;
+  resize: none;
+  font: inherit;
+}
+
+.interview-chat-input-wrap button {
+  align-self: end;
+  border: 1px solid rgba(174, 192, 255, 0.4);
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(49, 76, 157, 0.8),
+    rgba(57, 108, 157, 0.75)
+  );
+  color: #f5f8ff;
+  padding: 0.45rem 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}

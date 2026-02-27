@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useProblemsQuery } from "../../hooks/useProblemsQuery";
-import ProblemGrid from "../../components/ProblemGrid";
+import ProblemGrid from "../../components/ProblemGrid/ProblemGrid";
 import "./ProblemListPage.css";
 
 export default function ProblemListPage() {
