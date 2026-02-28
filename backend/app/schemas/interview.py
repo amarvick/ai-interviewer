@@ -27,9 +27,14 @@ class InterviewSessionUpdateStage(BaseModel):
     stage: InterviewStage
 
 
+class InterviewSessionComplete(BaseModel):
+    final_score: float | None = Field(default=None, ge=0, le=10)
+
+
 class InterviewMessageCreate(BaseModel):
     content: str
     role: InterviewMessageRole = "user"
+    has_submission: bool = False
 
 
 class InterviewEvaluationCreate(BaseModel):
@@ -84,6 +89,8 @@ class InterviewSessionResponse(BaseModel):
     stage: InterviewStage
     status: InterviewSessionStatus
     final_score: float | None = None
+    stuck_signal_count: int = 0
+    nudges_used_in_stage: int = 0
     started_at: datetime
     completed_at: datetime | None = None
     created_at: datetime

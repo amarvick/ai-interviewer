@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.db.database import engine, Base
-from app.api.routers import user, problem, submission
+from app.api.routers import user, problem, submission, interview
 
 app = FastAPI()
 
@@ -39,3 +39,4 @@ Base.metadata.create_all(bind=engine)
 app.include_router(user.router)
 app.include_router(problem.router)
 app.include_router(submission.router)
+app.include_router(interview.router)

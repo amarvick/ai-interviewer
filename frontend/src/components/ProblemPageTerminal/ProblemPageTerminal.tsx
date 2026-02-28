@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import "./ProblemPageTerminal.css";
-import type { TestCase } from "../types/testcase";
-import type { SubmissionResponse } from "../types/submission";
+import type { TestCase } from "../../types/testcase";
+import type { SubmissionResponse } from "../../types/submission";
 
 type TestCaseStatus = "pending" | "pass" | "fail";
 

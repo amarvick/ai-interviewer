@@ -1,7 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Problem } from "../../types/problem";
 import ProblemPageCodeEditor from "../ProblemPageCodeEditor/ProblemPageCodeEditor";
 import ProblemPageEditorToolbar from "../ProblemPageEditorToolbar/ProblemPageEditorToolbar";
+import {
+  getInterviewSession,
+  postInterviewMessage,
+  runSubmission,
+  startInterviewSession,
+} from "../../services/api";
+import type { InterviewSessionDetailResponse } from "../../types/interview";
 import "./InterviewPageEditor.css";
 
 interface InterviewPageEditorProps {
@@ -28,14 +35,31 @@ export default function InterviewPageEditor({
   );
   const [code, setCode] = useState(starterCode[selectedLanguage] ?? "");
   const [draftMessage, setDraftMessage] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "ai-intro",
-      role: "ai",
-      content:
-        "Hi, I am your interviewer. Start by explaining your approach, then ask me clarifying questions.",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionStage, setSessionStage] = useState<string>("INTRO");
+  const [isSending, setIsSending] = useState(false);
+  const [isSubmittingCode, setIsSubmittingCode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initializeSession = async () => {
+      setError(null);
+      try {
+        const started = await startInterviewSession({ problem_id: problem.id });
+        const detail = await getInterviewSession(started.id);
+        applySession(detail);
+      } catch (sessionError) {
+        const message =
+          sessionError instanceof Error
+            ? sessionError.message
+            : "Failed to start interview session.";
+        setError(message);
+      }
+    };
+
+    void initializeSession();
+  }, [problem.id]);
 
   const handleLanguageChange = (nextLanguage: string) => {
     setSelectedLanguage(nextLanguage);
@@ -46,27 +70,85 @@ export default function InterviewPageEditor({
     setCode(value ?? "");
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
+    if (!sessionId) {
+      return;
+    }
     const content = draftMessage.trim();
     if (!content) {
       return;
     }
 
-    const userMessage: ChatMessage = {
-      id: `you-${Date.now()}`,
-      role: "you",
-      content,
-    };
-
-    const aiReply: ChatMessage = {
-      id: `ai-${Date.now() + 1}`,
-      role: "ai",
-      content:
-        "Good direction. Talk through time/space complexity next, and explain tradeoffs with one alternative approach.",
-    };
-
-    setMessages((prev) => [...prev, userMessage, aiReply]);
     setDraftMessage("");
+    setIsSending(true);
+    setError(null);
+    try {
+      const detail = await postInterviewMessage(sessionId, {
+        content,
+        role: "user",
+        has_submission: false,
+      });
+      applySession(detail);
+    } catch (sendError) {
+      const message =
+        sendError instanceof Error ? sendError.message : "Failed to send message.";
+      setError(message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSubmitCode = async () => {
+    if (!sessionId) {
+      return;
+    }
+
+    setIsSubmittingCode(true);
+    setError(null);
+
+    try {
+      const submission = await runSubmission({
+        problem_id: problem.id,
+        code_submitted: code,
+        language: selectedLanguage,
+      });
+
+      const submissionSummary =
+        submission.result === "pass"
+          ? `I submitted my ${selectedLanguage} solution and all tests passed.`
+          : `I submitted my ${selectedLanguage} solution and it failed. Error: ${
+              submission.error ?? "Unknown failure"
+            }`;
+
+      const detail = await postInterviewMessage(sessionId, {
+        content: submissionSummary,
+        role: "user",
+        has_submission: true,
+      });
+      applySession(detail);
+    } catch (submitError) {
+      const message =
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to submit code.";
+      setError(message);
+    } finally {
+      setIsSubmittingCode(false);
+    }
+  };
+
+  const applySession = (detail: InterviewSessionDetailResponse) => {
+    setSessionId(detail.id);
+    setSessionStage(detail.stage);
+    setMessages(
+      detail.messages
+        .filter((message) => message.role === "assistant" || message.role === "user")
+        .map((message) => ({
+          id: message.id,
+          role: message.role === "assistant" ? "ai" : "you",
+          content: message.content,
+        }))
+    );
   };
 
   return (
@@ -76,10 +158,10 @@ export default function InterviewPageEditor({
           selectedLanguage={selectedLanguage}
           handleLanguageChange={handleLanguageChange}
           languageOptions={languageOptions}
-          onSubmit={handleSend}
-          isSubmitting={false}
-          submitLabel="Ask AI"
-          submittingLabel="Thinking..."
+          onSubmit={handleSubmitCode}
+          isSubmitting={isSubmittingCode}
+          submitLabel="Submit Code"
+          submittingLabel="Submitting..."
         />
         <ProblemPageCodeEditor
           selectedLanguage={selectedLanguage}
@@ -89,8 +171,16 @@ export default function InterviewPageEditor({
       </section>
 
       <section className="interview-chat-panel" aria-label="AI interview panel">
-        <header className="interview-chat-header">AI Interview Panel</header>
+        <header className="interview-chat-header">
+          <span>AI Interview Panel</span>
+          <span className="stage-pill">{sessionStage}</span>
+        </header>
         <div className="interview-chat-messages">
+          {messages.length === 0 && (
+            <p className="interview-chat-empty">
+              Interview messages will appear here when the session starts.
+            </p>
+          )}
           {messages.map((message) => (
             <article
               key={message.id}
@@ -110,10 +200,17 @@ export default function InterviewPageEditor({
             placeholder="Explain your thinking, ask a clarification, or answer a follow-up..."
             rows={3}
           />
-          <button type="button" onClick={handleSend}>
-            Send
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={
+              isSending || isSubmittingCode || !sessionId || !draftMessage.trim()
+            }
+          >
+            {isSending ? "Sending..." : "Send"}
           </button>
         </footer>
+        {error && <p className="interview-chat-error">{error}</p>}
       </section>
     </div>
   );

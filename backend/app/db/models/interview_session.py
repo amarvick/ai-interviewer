@@ -1,6 +1,6 @@
 from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, DateTime, ForeignKey, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Float, Integer
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 
@@ -24,6 +24,8 @@ class InterviewSession(Base):
     stage = Column(String(40), nullable=False, default="INTRO")
     status = Column(String(20), nullable=False, default="ACTIVE")
     final_score = Column(Float, nullable=True)
+    stuck_signal_count = Column(Integer, nullable=False, default=0)
+    nudges_used_in_stage = Column(Integer, nullable=False, default=0)
 
     started_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)

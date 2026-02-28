@@ -11,11 +11,19 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
     stage VARCHAR(40) NOT NULL DEFAULT 'INTRO',
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     final_score DOUBLE PRECISION NULL,
+    stuck_signal_count INTEGER NOT NULL DEFAULT 0,
+    nudges_used_in_stage INTEGER NOT NULL DEFAULT 0,
     started_at TIMESTAMP NOT NULL DEFAULT NOW(),
     completed_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE interview_sessions
+    ADD COLUMN IF NOT EXISTS stuck_signal_count INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE interview_sessions
+    ADD COLUMN IF NOT EXISTS nudges_used_in_stage INTEGER NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS ix_interview_sessions_id ON interview_sessions (id);
 CREATE INDEX IF NOT EXISTS ix_interview_sessions_user_id ON interview_sessions (user_id);

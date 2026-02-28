@@ -11,6 +11,9 @@ Adds the three interview tables:
 - `interview_messages` does **not** include `problem_id` because that is already available through:
   - `interview_messages.session_id -> interview_sessions.problem_id`
 - `interview_evaluations` includes both category scores and optional `rubric_json` for future rubric expansion.
+- `interview_sessions` stores deterministic stage-engine counters:
+  - `stuck_signal_count`
+  - `nudges_used_in_stage`
 
 ## Apply
 

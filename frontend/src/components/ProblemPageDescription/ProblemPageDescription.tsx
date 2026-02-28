@@ -1,4 +1,4 @@
-import type { Problem } from "../types/problem";
+import type { Problem } from "../../types/problem";
 import "./ProblemPageDescription.css";
 
 interface ProblemPageDescriptionProps {
