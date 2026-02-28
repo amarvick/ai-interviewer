@@ -7,13 +7,13 @@ import "./ProblemWorkspace.css";
 
 interface ProblemWorkspaceProps {
   problemId: string;
-  secondary: (problem: Problem) => ReactNode;
+  secondaryComponent: (problem: Problem) => ReactNode;
   workspaceClassName?: string;
 }
 
 export default function ProblemWorkspace({
   problemId,
-  secondary,
+  secondaryComponent,
   workspaceClassName = "problem-workspace",
 }: ProblemWorkspaceProps) {
   const { data, isLoading, isError, error } = useProblemQuery(problemId);
@@ -34,7 +34,7 @@ export default function ProblemWorkspace({
           maxPrimarySize={72}
           className="problem-layout"
           primary={<ProblemPageDescription problem={data} />}
-          secondary={secondary(data)}
+          secondary={secondaryComponent(data)}
         />
       )}
     </section>

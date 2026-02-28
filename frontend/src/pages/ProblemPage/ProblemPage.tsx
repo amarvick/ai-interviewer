@@ -8,7 +8,7 @@ export default function ProblemPage() {
   return (
     <ProblemWorkspace
       problemId={id ?? ""}
-      secondary={(problem) => <ProblemPageEditor problem={problem} />}
+      secondaryComponent={(problem) => <ProblemPageEditor problem={problem} />}
     />
   );
 }

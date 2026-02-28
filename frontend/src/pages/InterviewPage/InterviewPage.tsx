@@ -8,7 +8,9 @@ export default function InterviewPage() {
   return (
     <ProblemWorkspace
       problemId={id ?? ""}
-      secondary={(problem) => <InterviewPageEditor problem={problem} />}
+      secondaryComponent={(problem) => (
+        <InterviewPageEditor problem={problem} />
+      )}
     />
   );
 }
