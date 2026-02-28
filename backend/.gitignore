@@ -11,6 +11,7 @@ env/
 # Local environment files
 .env
 .env.*
+!.env.example
 
 # Tool caches
 .mypy_cache/
