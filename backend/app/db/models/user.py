@@ -20,3 +20,5 @@ class User(Base):
 
     submissions = relationship("Submission", back_populates="user")
     user_problems = relationship("UserProblem", back_populates="user", cascade="all, delete-orphan")
+    interview_sessions = relationship("InterviewSession", back_populates="user", cascade="all, delete-orphan")
+    interview_messages = relationship("InterviewMessage", back_populates="user")

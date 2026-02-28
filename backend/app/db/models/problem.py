@@ -28,3 +28,4 @@ class Problem(Base):
     submissions = relationship("Submission", back_populates="problem")
     user_problems = relationship("UserProblem", back_populates="problem", cascade="all, delete-orphan")
     testcases = relationship("TestCase", back_populates="problem", cascade="all, delete-orphan")
+    interview_sessions = relationship("InterviewSession", back_populates="problem", cascade="all, delete-orphan")
