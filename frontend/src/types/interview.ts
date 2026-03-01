@@ -58,6 +58,12 @@ export interface InterviewSessionDetailResponse extends InterviewSessionResponse
   evaluations: InterviewEvaluationResponse[];
 }
 
+export interface InterviewCompletionResponse extends InterviewSessionResponse {
+  strengths: string[];
+  gaps: string[];
+  next_steps: string[];
+}
+
 export interface StartInterviewSessionPayload {
   problem_id: string;
 }

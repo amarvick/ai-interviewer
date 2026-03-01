@@ -103,3 +103,9 @@ class InterviewSessionResponse(BaseModel):
 class InterviewSessionDetailResponse(InterviewSessionResponse):
     messages: list[InterviewMessageResponse] = Field(default_factory=list)
     evaluations: list[InterviewEvaluationResponse] = Field(default_factory=list)
+
+
+class InterviewCompletionResponse(InterviewSessionResponse):
+    strengths: list[str] = Field(default_factory=list)
+    gaps: list[str] = Field(default_factory=list)
+    next_steps: list[str] = Field(default_factory=list)

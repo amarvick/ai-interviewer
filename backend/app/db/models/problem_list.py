@@ -11,5 +11,15 @@ class ProblemList(Base):
     icon_url = Column(String, index=True, nullable=False)
     created_at= Column(DateTime, default=datetime.utcnow)
     
-    problem_links = relationship("ProblemListProblem", back_populates="problem_list", cascade="all, delete-orphan")
-    problems = relationship("Problem", secondary="problem_list_problems", back_populates="problem_lists")
+    problem_links = relationship(
+        "ProblemListProblem",
+        back_populates="problem_list",
+        cascade="all, delete-orphan",
+        overlaps="problem_lists,problems",
+    )
+    problems = relationship(
+        "Problem",
+        secondary="problem_list_problems",
+        back_populates="problem_lists",
+        overlaps="problem_links,problem_list_links,problem,problem_list",
+    )

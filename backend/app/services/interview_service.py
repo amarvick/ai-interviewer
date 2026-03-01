@@ -1,4 +1,6 @@
 from datetime import datetime
+import logging
+from time import perf_counter
 from app.core.constants import InterviewStage
 from app.crud.interview import (
     create_interview_evaluation,
@@ -15,10 +17,18 @@ from app.services.interview_ai_service import (
     generate_next_interviewer_message,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def start_interview_session(db, user_id: str, problem_id: str):
+    start_time = perf_counter()
     problem = get_problem_by_id(db, problem_id)
     if problem is None:
+        logger.warning(
+            "interview.service.start.problem_not_found user_id=%s problem_id=%s",
+            user_id,
+            problem_id,
+        )
         return None
 
     session = create_interview_session(db, user_id=user_id, problem_id=problem_id)
@@ -34,6 +44,13 @@ def start_interview_session(db, user_id: str, problem_id: str):
         user_id=None,
     )
     db.commit()
+    logger.info(
+        "interview.service.start.created user_id=%s session_id=%s problem_id=%s latency_ms=%s",
+        user_id,
+        session.id,
+        problem_id,
+        int((perf_counter() - start_time) * 1000),
+    )
     return get_interview_session_by_id(db, session.id)
 
 
@@ -44,10 +61,21 @@ def process_interview_message(
     content: str,
     has_submission: bool,
 ):
+    start_time = perf_counter()
     session = get_interview_session_by_id(db, session_id)
     if session is None:
+        logger.warning(
+            "interview.service.message.not_found session_id=%s user_id=%s",
+            session_id,
+            user_id,
+        )
         return None
     if session.status == "COMPLETED":
+        logger.info(
+            "interview.service.message.already_completed session_id=%s user_id=%s",
+            session_id,
+            user_id,
+        )
         return session
 
     create_interview_message(
@@ -93,6 +121,21 @@ def process_interview_message(
         session.status = "COMPLETED"
         session.completed_at = datetime.utcnow()
 
+    logger.info(
+        "interview.stage.transition session_id=%s user_id=%s from_stage=%s to_stage=%s action=%s "
+        "turns_in_stage=%s stuck_signals=%s nudges_used=%s score_stage=%s has_submission=%s",
+        session.id,
+        user_id,
+        previous_stage,
+        decision.next_stage,
+        decision.action,
+        user_turns_in_stage,
+        session.stuck_signal_count,
+        session.nudges_used_in_stage,
+        decision.should_score_stage,
+        has_submission,
+    )
+
     if decision.should_score_stage:
         stage_messages = [
             {"role": message.role, "content": message.content}
@@ -137,6 +180,13 @@ def process_interview_message(
     )
 
     db.commit()
+    logger.info(
+        "interview.service.message.completed session_id=%s user_id=%s stage=%s latency_ms=%s",
+        session.id,
+        user_id,
+        session.stage,
+        int((perf_counter() - start_time) * 1000),
+    )
     return get_interview_session_by_id(db, session.id)
 
 
@@ -146,10 +196,22 @@ def complete_interview_session(
     user_id: str,
     requested_final_score: float | None = None,
 ):
+    start_time = perf_counter()
     session = get_interview_session_by_id(db, session_id)
     if session is None:
+        logger.warning(
+            "interview.service.complete.not_found session_id=%s user_id=%s",
+            session_id,
+            user_id,
+        )
         return None
     if session.user_id != user_id:
+        logger.warning(
+            "interview.service.complete.forbidden session_id=%s user_id=%s owner_user_id=%s",
+            session_id,
+            user_id,
+            session.user_id,
+        )
         return None
 
     evaluations = get_recent_evaluations_by_session_id(db, session.id, limit=500)
@@ -165,7 +227,35 @@ def complete_interview_session(
     session.stage = "COMPLETE"
     session.completed_at = datetime.utcnow()
     db.commit()
-    return get_interview_session_by_id(db, session.id)
+    refreshed = get_interview_session_by_id(db, session.id)
+    if refreshed is None:
+        return None
+    feedback = _build_final_feedback(evaluations)
+    logger.info(
+        "interview.service.complete.completed session_id=%s user_id=%s final_score=%s eval_count=%s latency_ms=%s",
+        session.id,
+        user_id,
+        session.final_score,
+        len(evaluations),
+        int((perf_counter() - start_time) * 1000),
+    )
+    return {
+        "id": refreshed.id,
+        "user_id": refreshed.user_id,
+        "problem_id": refreshed.problem_id,
+        "stage": refreshed.stage,
+        "status": refreshed.status,
+        "final_score": refreshed.final_score,
+        "stuck_signal_count": refreshed.stuck_signal_count,
+        "nudges_used_in_stage": refreshed.nudges_used_in_stage,
+        "started_at": refreshed.started_at,
+        "completed_at": refreshed.completed_at,
+        "created_at": refreshed.created_at,
+        "updated_at": refreshed.updated_at,
+        "strengths": feedback["strengths"],
+        "gaps": feedback["gaps"],
+        "next_steps": feedback["next_steps"],
+    }
 
 
 def _build_recent_context(db, session_id: str) -> list[dict[str, str]]:
@@ -190,3 +280,57 @@ def _build_recent_context(db, session_id: str) -> list[dict[str, str]]:
             },
         )
     return context
+
+
+def _build_final_feedback(evaluations: list) -> dict[str, list[str]]:
+    if not evaluations:
+        return {
+            "strengths": ["You completed the interview flow."],
+            "gaps": ["Not enough rubric data yet to identify specific gaps."],
+            "next_steps": [
+                "Complete another interview run with fuller explanations per stage."
+            ],
+        }
+
+    category_totals = {
+        "problem_understanding": 0.0,
+        "approach_quality": 0.0,
+        "code_correctness_reasoning": 0.0,
+        "complexity_analysis": 0.0,
+        "communication_clarity": 0.0,
+    }
+    for evaluation in evaluations:
+        category_totals["problem_understanding"] += evaluation.problem_understanding_score
+        category_totals["approach_quality"] += evaluation.approach_quality_score
+        category_totals["code_correctness_reasoning"] += (
+            evaluation.code_correctness_reasoning_score
+        )
+        category_totals["complexity_analysis"] += evaluation.complexity_analysis_score
+        category_totals["communication_clarity"] += evaluation.communication_clarity_score
+
+    count = float(len(evaluations))
+    category_averages = {key: value / count for key, value in category_totals.items()}
+    ordered_best = sorted(category_averages.items(), key=lambda item: item[1], reverse=True)
+    ordered_worst = sorted(category_averages.items(), key=lambda item: item[1])
+
+    label = {
+        "problem_understanding": "Problem understanding",
+        "approach_quality": "Approach quality",
+        "code_correctness_reasoning": "Correctness reasoning",
+        "complexity_analysis": "Complexity analysis",
+        "communication_clarity": "Communication clarity",
+    }
+    next_step_by_gap = {
+        "problem_understanding": "Restate requirements and list at least 3 edge cases before coding.",
+        "approach_quality": "Compare one alternative approach and justify your final choice.",
+        "code_correctness_reasoning": "Explain one invariant and walk through one concrete test trace.",
+        "complexity_analysis": "State exact time/space Big-O and tie it to each major operation.",
+        "communication_clarity": "Answer in short structured bullets: plan, why, tradeoff.",
+    }
+
+    strengths = [f"{label[key]} ({avg:.2f}/2)" for key, avg in ordered_best[:2]]
+    gap_candidates = [item for item in ordered_worst if item[1] < 1.5] or ordered_worst[:2]
+    gaps = [f"{label[key]} ({avg:.2f}/2)" for key, avg in gap_candidates[:2]]
+    next_steps = [next_step_by_gap[key] for key, _ in gap_candidates[:3]]
+
+    return {"strengths": strengths, "gaps": gaps, "next_steps": next_steps}

@@ -18,5 +18,13 @@ class ProblemListProblem(Base):
     problem_list_id = Column(String(64), ForeignKey("problem_lists.id"), nullable=False)
     problem_id = Column(String(64), ForeignKey("problems.id"), nullable=False)
 
-    problem_list = relationship("ProblemList", back_populates="problem_links")
-    problem = relationship("Problem", back_populates="problem_list_links")   
+    problem_list = relationship(
+        "ProblemList",
+        back_populates="problem_links",
+        overlaps="problem_lists,problems",
+    )
+    problem = relationship(
+        "Problem",
+        back_populates="problem_list_links",
+        overlaps="problem_lists,problems",
+    )

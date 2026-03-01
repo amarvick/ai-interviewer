@@ -1,4 +1,5 @@
 import type {
+  InterviewCompletionResponse,
   InterviewMessagePayload,
   InterviewSessionDetailResponse,
   InterviewSessionResponse,
@@ -58,7 +59,7 @@ export async function postInterviewMessage(
 export async function completeInterviewSession(
   sessionId: string,
   finalScore?: number
-): Promise<InterviewSessionResponse> {
+): Promise<InterviewCompletionResponse> {
   const response = await fetch(
     `${API_BASE_URL}/interview/session/${sessionId}/complete`,
     {
@@ -70,5 +71,5 @@ export async function completeInterviewSession(
       body: JSON.stringify({ final_score: finalScore ?? null }),
     }
   );
-  return parseJson<InterviewSessionResponse>(response);
+  return parseJson<InterviewCompletionResponse>(response);
 }

@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import json
 from typing import Any
+import logging
+from time import perf_counter
 
 from app.core.config import OPENAI_API_KEY, OPENAI_MODEL
 from app.core.constants import InterviewAction, InterviewStage
 
-try:
-    from openai import OpenAI
-except Exception:  # pragma: no cover
-    OpenAI = None  # type: ignore[assignment]
+from openai import OpenAI
 
+logger = logging.getLogger(__name__)
 
 def generate_next_interviewer_message(
     stage: InterviewStage,
@@ -25,9 +25,17 @@ def generate_next_interviewer_message(
       "confidence": "low" | "medium" | "high"
     }
     """
+    
+    start_time = perf_counter()
     fallback = _fallback_interviewer_message(stage=stage, action=action)
     client = _build_client()
+    
     if client is None:
+        logger.info(
+            "interview.ai.message.fallback reason=client_unavailable stage=%s action=%s",
+            stage,
+            action,
+        )
         return fallback
 
     system_prompt = (
@@ -68,13 +76,35 @@ def generate_next_interviewer_message(
         if confidence not in {"low", "medium", "high"}:
             confidence = "medium"
         if not assistant_message:
+            logger.warning(
+                "interview.ai.message.empty_content stage=%s action=%s latency_ms=%s",
+                stage,
+                action,
+                int((perf_counter() - start_time) * 1000),
+            )
             return fallback
+        usage = _extract_usage(completion)
+        logger.info(
+            "interview.ai.message.success stage=%s action=%s latency_ms=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+            stage,
+            action,
+            int((perf_counter() - start_time) * 1000),
+            usage["prompt_tokens"],
+            usage["completion_tokens"],
+            usage["total_tokens"],
+        )
         return {
             "assistant_message": assistant_message,
             "intent": intent,
             "confidence": confidence,
         }
     except Exception:
+        logger.exception(
+            "interview.ai.message.failure stage=%s action=%s latency_ms=%s",
+            stage,
+            action,
+            int((perf_counter() - start_time) * 1000),
+        )
         return fallback
 
 
@@ -85,9 +115,11 @@ def evaluate_stage_rubric(
     """
     Returns rubric JSON with numeric scores and summary.
     """
+    start_time = perf_counter()
     fallback = _fallback_rubric(stage=stage)
     client = _build_client()
     if client is None:
+        logger.info("interview.ai.rubric.fallback reason=client_unavailable stage=%s", stage)
         return fallback
 
     system_prompt = (
@@ -123,20 +155,36 @@ def evaluate_stage_rubric(
         content = completion.choices[0].message.content or "{}"
         parsed = json.loads(content)
         normalized = _normalize_rubric(parsed)
+        usage = _extract_usage(completion)
+        logger.info(
+            "interview.ai.rubric.success stage=%s latency_ms=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+            stage,
+            int((perf_counter() - start_time) * 1000),
+            usage["prompt_tokens"],
+            usage["completion_tokens"],
+            usage["total_tokens"],
+        )
         return normalized
     except Exception:
+        logger.exception(
+            "interview.ai.rubric.failure stage=%s latency_ms=%s",
+            stage,
+            int((perf_counter() - start_time) * 1000),
+        )
         return fallback
 
 
 def _build_client():
     if OpenAI is None:
+        logger.error("OpenAI import failed")
         return None
+
     if not OPENAI_API_KEY:
+        logger.error("OpenAI API Key doesn't work")
         return None
-    try:
-        return OpenAI(api_key=OPENAI_API_KEY)
-    except Exception:
-        return None
+
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    return client
 
 
 def _fallback_interviewer_message(
@@ -198,4 +246,26 @@ def _normalize_rubric(raw: dict[str, Any]) -> dict[str, Any]:
         "complexity_analysis_score": score("complexity_analysis_score"),
         "communication_clarity_score": score("communication_clarity_score"),
         "summary": str(raw.get("summary", "")).strip()[:500],
+    }
+
+
+def _extract_usage(completion: Any) -> dict[str, int]:
+    usage = getattr(completion, "usage", None)
+    if usage is None:
+        return {"prompt_tokens": -1, "completion_tokens": -1, "total_tokens": -1}
+
+    if isinstance(usage, dict):
+        prompt_tokens = int(usage.get("prompt_tokens", -1))
+        completion_tokens = int(usage.get("completion_tokens", -1))
+        total_tokens = int(usage.get("total_tokens", -1))
+        return {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        }
+
+    return {
+        "prompt_tokens": int(getattr(usage, "prompt_tokens", -1)),
+        "completion_tokens": int(getattr(usage, "completion_tokens", -1)),
+        "total_tokens": int(getattr(usage, "total_tokens", -1)),
     }

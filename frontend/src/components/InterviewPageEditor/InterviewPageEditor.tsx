@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { KeyboardEvent } from "react";
 import type { Problem } from "../../types/problem";
 import ProblemPageCodeEditor from "../ProblemPageCodeEditor/ProblemPageCodeEditor";
 import ProblemPageEditorToolbar from "../ProblemPageEditorToolbar/ProblemPageEditorToolbar";
@@ -137,6 +138,13 @@ export default function InterviewPageEditor({
     }
   };
 
+  const handleDraftKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void handleSend();
+    }
+  };
+
   const applySession = (detail: InterviewSessionDetailResponse) => {
     setSessionId(detail.id);
     setSessionStage(detail.stage);
@@ -197,6 +205,7 @@ export default function InterviewPageEditor({
           <textarea
             value={draftMessage}
             onChange={(event) => setDraftMessage(event.target.value)}
+            onKeyDown={handleDraftKeyDown}
             placeholder="Explain your thinking, ask a clarification, or answer a follow-up..."
             rows={3}
           />

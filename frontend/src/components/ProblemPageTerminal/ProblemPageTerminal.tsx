@@ -42,12 +42,17 @@ export default function ProblemPageTerminal({
   );
 
   return (
-    <section className="terminal-panel" aria-label="Submission and results panel">
+    <section
+      className="terminal-panel"
+      aria-label="Submission and results panel"
+    >
       <header className="terminal-header">
         <div className="terminal-tabs">
           <button
             type="button"
-            className={activeTab === "results" ? "tab-button active" : "tab-button"}
+            className={
+              activeTab === "results" ? "tab-button active" : "tab-button"
+            }
             onClick={() => setActiveTab("results")}
           >
             Test Results
@@ -82,7 +87,9 @@ export default function ProblemPageTerminal({
                     </div>
                     <div className="terminal-item-meta">
                       <span>Input: {prettyJson(testCase.params)}</span>
-                      <span>Expected: {prettyJson(testCase.expected_output)}</span>
+                      <span>
+                        Expected: {prettyJson(testCase.expected_output)}
+                      </span>
                     </div>
                   </article>
                 );
@@ -105,7 +112,7 @@ export default function ProblemPageTerminal({
 
         {activeTab === "submissions" && (
           <div className="terminal-list">
-            {orderedSubmissions.map((submission) => (
+            {orderedSubmissions.map((submission, index) => (
               <article key={submission.id} className="terminal-item">
                 <div className="terminal-item-title">
                   <span
@@ -113,7 +120,9 @@ export default function ProblemPageTerminal({
                       submission.result === "pass" ? "pass" : "fail"
                     }`}
                   />
-                  <strong>Submission #{submission.id}</strong>
+                  <strong>
+                    Submission #{orderedSubmissions.length - index}
+                  </strong>
                 </div>
                 <div className="terminal-item-meta">
                   <span>

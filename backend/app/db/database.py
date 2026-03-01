@@ -3,10 +3,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
-from dotenv import load_dotenv
-
-# can move secret vars in .env file and load them here, so they aren't hardcoded in the codebase
-load_dotenv()
 
 # should match docker-compose.yml config
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/ai_interviewer") 

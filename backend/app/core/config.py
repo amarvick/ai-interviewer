@@ -1,7 +1,9 @@
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "") #TODO - change this later. MUST be changed before production!!!!!!
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "300"))
 
