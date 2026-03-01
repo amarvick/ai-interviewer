@@ -26,7 +26,7 @@ export default function Navbar() {
     <header className="navbar-shell">
       <nav className="navbar">
         <Link to="/" className="brand">
-          AI Interviewer
+          WhiteboardAI
         </Link>
 
         <div className="nav-links">

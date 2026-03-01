@@ -24,7 +24,7 @@ export default function HomePage() {
     return (
       <div className="home-page home-page-landing">
         <section className="hero">
-          <h1 className="hero-title">AI Interviewer</h1>
+          <h1 className="hero-title">WhiteboardAI</h1>
           <p className="hero-copy">
             Practice real coding interview problems, track your progress, and
             sharpen your communication under pressure.

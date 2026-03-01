@@ -32,7 +32,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "AI Interviewer Backend is running!"}
+    return {"message": "WhiteboardAI Backend is running!"}
 
 @app.get("/health/db")
 def check_db():
