@@ -1,191 +1,117 @@
 from __future__ import annotations
-
 import json
-from typing import Any
 import logging
 from time import perf_counter
+from typing import Any
 
-from app.core.config import OPENAI_API_KEY, OPENAI_MODEL
+# Import the new Google GenAI SDK
+from google import genai
+from google.genai import types
+from pydantic import BaseModel
+
+from app.core.config import INTERVIEW_AI_MODE, GEMINI_API_KEY, GEMINI_MODEL
 from app.core.constants import InterviewAction, InterviewStage
 
-from openai import OpenAI
-
 logger = logging.getLogger(__name__)
+
+# --- Pydantic Schemas for Strict JSON ---
+class InterviewerResponse(BaseModel):
+    assistant_message: str
+    intent: str
+    confidence: str # low, medium, high
+
+class RubricResponse(BaseModel):
+    problem_understanding_score: int
+    approach_quality_score: int
+    code_correctness_reasoning_score: int
+    complexity_analysis_score: int
+    communication_clarity_score: int
+    summary: str
 
 def generate_next_interviewer_message(
     stage: InterviewStage,
     action: InterviewAction,
     recent_messages: list[dict[str, str]],
 ) -> dict[str, Any]:
-    """
-    Returns JSON-friendly interviewer output:
-    {
-      "assistant_message": str,
-      "intent": str,
-      "confidence": "low" | "medium" | "high"
-    }
-    """
-    
     start_time = perf_counter()
     fallback = _fallback_interviewer_message(stage=stage, action=action)
     client = _build_client()
     
-    if client is None:
-        logger.info(
-            "interview.ai.message.fallback reason=client_unavailable stage=%s action=%s",
-            stage,
-            action,
-        )
+    if not client:
+        if _is_strict_mode(): raise RuntimeError("Gemini Client Unavailable")
         return fallback
 
-    system_prompt = (
-        "You are a concise technical interviewer. "
-        "Ask at most one question. Keep reply under 80 words. "
-        "Do not provide full solutions unless explicitly asked. "
-        "Return strict JSON with keys: assistant_message, intent, confidence."
+    system_instruction = (
+        "You are a concise technical interviewer. Ask at most one question. "
+        "Keep reply under 80 words. Do not provide solutions unless asked."
     )
 
-    payload_messages = [{"role": "system", "content": system_prompt}]
-    payload_messages.extend(
-        {"role": message["role"], "content": message["content"]}
-        for message in recent_messages[-8:]
-        if "role" in message and "content" in message
-    )
-    payload_messages.append(
-        {
-            "role": "system",
-            "content": (
-                f"Current stage: {stage}. Stage-engine action: {action}. "
-                "Shape the next interviewer turn accordingly."
-            ),
-        }
-    )
+    # Convert messages to Gemini format (user/model instead of user/assistant)
+    contents = []
+    for m in recent_messages[-8:]:
+        role = "user" if m["role"] == "user" else "model"
+        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
+    
+    # Add the current "hidden" nudge from the engine
+    contents.append(types.Content(
+        role="user", 
+        parts=[types.Part.from_text(text=f"Current stage: {stage}. Action: {action}.")]
+    ))
 
     try:
-        completion = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=payload_messages,
-            response_format={"type": "json_object"},
-            temperature=0.4,
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.4,
+                # This enforces the JSON structure perfectly
+                response_mime_type="application/json",
+                response_schema=InterviewerResponse,
+            ),
         )
-        content = completion.choices[0].message.content or "{}"
-        parsed = json.loads(content)
-        assistant_message = str(parsed.get("assistant_message", "")).strip()
-        intent = str(parsed.get("intent", action)).strip() or action
-        confidence = str(parsed.get("confidence", "medium")).strip().lower()
-        if confidence not in {"low", "medium", "high"}:
-            confidence = "medium"
-        if not assistant_message:
-            logger.warning(
-                "interview.ai.message.empty_content stage=%s action=%s latency_ms=%s",
-                stage,
-                action,
-                int((perf_counter() - start_time) * 1000),
-            )
-            return fallback
-        usage = _extract_usage(completion)
-        logger.info(
-            "interview.ai.message.success stage=%s action=%s latency_ms=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
-            stage,
-            action,
-            int((perf_counter() - start_time) * 1000),
-            usage["prompt_tokens"],
-            usage["completion_tokens"],
-            usage["total_tokens"],
-        )
+        
+        # Gemini returns parsed objects directly if response_schema is provided
+        parsed = response.parsed
         return {
-            "assistant_message": assistant_message,
-            "intent": intent,
-            "confidence": confidence,
+            "assistant_message": parsed.assistant_message,
+            "intent": parsed.intent or action,
+            "confidence": parsed.confidence.lower() if parsed.confidence in ["low", "medium", "high"] else "medium"
         }
-    except Exception:
-        logger.exception(
-            "interview.ai.message.failure stage=%s action=%s latency_ms=%s",
-            stage,
-            action,
-            int((perf_counter() - start_time) * 1000),
-        )
+    except Exception as exc:
+        logger.exception("Gemini failed")
         return fallback
-
 
 def evaluate_stage_rubric(
     stage: InterviewStage,
     stage_messages: list[dict[str, str]],
 ) -> dict[str, Any]:
-    """
-    Returns rubric JSON with numeric scores and summary.
-    """
-    start_time = perf_counter()
-    fallback = _fallback_rubric(stage=stage)
     client = _build_client()
-    if client is None:
-        logger.info("interview.ai.rubric.fallback reason=client_unavailable stage=%s", stage)
-        return fallback
+    if not client: return _fallback_rubric(stage)
 
-    system_prompt = (
-        "Evaluate interview performance for one stage only. "
-        "Score each category from 0 to 2. "
-        "Return strict JSON with keys: "
-        "problem_understanding_score, approach_quality_score, "
-        "code_correctness_reasoning_score, complexity_analysis_score, "
-        "communication_clarity_score, summary."
-    )
-
-    transcript = "\n".join(
-        f"{msg.get('role', 'user')}: {msg.get('content', '')}" for msg in stage_messages[-10:]
-    )
+    transcript = "\n".join([f"{m['role']}: {m['content']}" for m in stage_messages[-10:]])
+    
+    prompt = f"Evaluate the following interview transcript for the stage: {stage}\n\nTranscript:\n{transcript}"
 
     try:
-        completion = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": (
-                        f"Stage: {stage}\n"
-                        f"Transcript:\n{transcript}\n"
-                        "Return JSON only."
-                    ),
-                },
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction="Evaluate performance. Scores 0-2.",
+                response_mime_type="application/json",
+                response_schema=RubricResponse,
+            ),
         )
-        content = completion.choices[0].message.content or "{}"
-        parsed = json.loads(content)
-        normalized = _normalize_rubric(parsed)
-        usage = _extract_usage(completion)
-        logger.info(
-            "interview.ai.rubric.success stage=%s latency_ms=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
-            stage,
-            int((perf_counter() - start_time) * 1000),
-            usage["prompt_tokens"],
-            usage["completion_tokens"],
-            usage["total_tokens"],
-        )
-        return normalized
+        # Convert Pydantic model to dict for your existing frontend/logic
+        return response.parsed.model_dump()
     except Exception:
-        logger.exception(
-            "interview.ai.rubric.failure stage=%s latency_ms=%s",
-            stage,
-            int((perf_counter() - start_time) * 1000),
-        )
-        return fallback
-
+        return _fallback_rubric(stage)
 
 def _build_client():
-    if OpenAI is None:
-        logger.error("OpenAI import failed")
+    if not GEMINI_API_KEY:
         return None
-
-    if not OPENAI_API_KEY:
-        logger.error("OpenAI API Key doesn't work")
-        return None
-
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    return client
-
+    return genai.Client(api_key=GEMINI_API_KEY)
 
 def _fallback_interviewer_message(
     stage: InterviewStage,
@@ -269,3 +195,7 @@ def _extract_usage(completion: Any) -> dict[str, int]:
         "completion_tokens": int(getattr(usage, "completion_tokens", -1)),
         "total_tokens": int(getattr(usage, "total_tokens", -1)),
     }
+
+
+def _is_strict_mode() -> bool:
+    return INTERVIEW_AI_MODE == "strict"

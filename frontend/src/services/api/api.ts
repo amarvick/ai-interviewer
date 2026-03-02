@@ -9,12 +9,16 @@ export async function parseJson<T>(response: Response): Promise<T> {
       clearAuthToken();
     }
     const fallback = `Request failed with status ${response.status}`;
+    let message = fallback;
     try {
       const errorPayload = (await response.json()) as { detail?: string };
-      throw new Error(errorPayload.detail ?? fallback);
+      if (errorPayload?.detail) {
+        message = errorPayload.detail;
+      }
     } catch {
-      throw new Error(fallback);
+      // keep fallback
     }
+    throw new Error(message);
   }
 
   return (await response.json()) as T;

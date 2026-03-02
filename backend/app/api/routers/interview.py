@@ -19,6 +19,7 @@ from app.services.interview_service import (
     process_interview_message,
     start_interview_session,
 )
+from app.services.interview_ai_service import InterviewAIError
 from app.crud.interview import get_interview_session_by_id
 
 router = APIRouter(prefix="/interview", tags=["interview"])
@@ -114,13 +115,22 @@ def post_interview_message(
         )
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    session = process_interview_message(
-        db=db,
-        session_id=session_id,
-        user_id=current_user.id,
-        content=payload.content,
-        has_submission=payload.has_submission,
-    )
+    try:
+        session = process_interview_message(
+            db=db,
+            session_id=session_id,
+            user_id=current_user.id,
+            content=payload.content,
+            has_submission=payload.has_submission,
+        )
+    except InterviewAIError as exc:
+        logger.warning(
+            "interview.message.ai_failure user_id=%s session_id=%s detail=%s",
+            current_user.id,
+            session_id,
+            str(exc),
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     if session is None:
         logger.warning(
             "interview.message.failed user_id=%s session_id=%s reason=process_failed",

@@ -80,6 +80,11 @@ export default function InterviewPageEditor({
       return;
     }
 
+    const optimisticMessageId = `optimistic-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: optimisticMessageId, role: "you", content },
+    ]);
     setDraftMessage("");
     setIsSending(true);
     setError(null);
@@ -91,6 +96,10 @@ export default function InterviewPageEditor({
       });
       applySession(detail);
     } catch (sendError) {
+      setMessages((prev) =>
+        prev.filter((message) => message.id !== optimisticMessageId)
+      );
+      setDraftMessage(content);
       const message =
         sendError instanceof Error ? sendError.message : "Failed to send message.";
       setError(message);
