@@ -1,18 +1,23 @@
 from __future__ import annotations
-import json
 import logging
-from time import perf_counter
-from typing import Any
+from typing import Any, TypedDict, cast
 
-# Import the new Google GenAI SDK
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
 
-from app.core.config import INTERVIEW_AI_MODE, GEMINI_API_KEY, GEMINI_MODEL
+from app.core.config import INTERVIEW_AI_MODE, GEMINI_API_KEY, GEMINI_MODEL_CHAT
 from app.core.constants import InterviewAction, InterviewStage
 
 logger = logging.getLogger(__name__)
+
+
+class InterviewAIError(RuntimeError):
+    pass
+
+class ChatTurn(TypedDict):
+    role: str
+    content: str
 
 # --- Pydantic Schemas for Strict JSON ---
 class InterviewerResponse(BaseModel):
@@ -31,14 +36,19 @@ class RubricResponse(BaseModel):
 def generate_next_interviewer_message(
     stage: InterviewStage,
     action: InterviewAction,
-    recent_messages: list[dict[str, str]],
+    recent_messages: list[ChatTurn],
 ) -> dict[str, Any]:
-    start_time = perf_counter()
     fallback = _fallback_interviewer_message(stage=stage, action=action)
     client = _build_client()
     
     if not client:
-        if _is_strict_mode(): raise RuntimeError("Gemini Client Unavailable")
+        logger.error(
+            "interview.ai.message.client_unavailable stage=%s action=%s",
+            stage,
+            action,
+        )
+        if _is_strict_mode():
+            raise InterviewAIError("Gemini client unavailable. Check GEMINI_API_KEY and package setup.")
         return fallback
 
     system_instruction = (
@@ -49,8 +59,11 @@ def generate_next_interviewer_message(
     # Convert messages to Gemini format (user/model instead of user/assistant)
     contents = []
     for m in recent_messages[-8:]:
-        role = "user" if m["role"] == "user" else "model"
-        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
+        role = "user" if str(m["role"]) == "user" else "model"
+        content_text = str(m["content"])
+        contents.append(
+            types.Content(role=role, parts=[types.Part.from_text(text=content_text)])
+        )
     
     # Add the current "hidden" nudge from the engine
     contents.append(types.Content(
@@ -60,7 +73,7 @@ def generate_next_interviewer_message(
 
     try:
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=GEMINI_MODEL_CHAT,
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -72,30 +85,53 @@ def generate_next_interviewer_message(
         )
         
         # Gemini returns parsed objects directly if response_schema is provided
-        parsed = response.parsed
+        parsed = cast(InterviewerResponse | None, response.parsed)
+        if parsed is None:
+            raise InterviewAIError("Gemini returned no parsed interviewer payload.")
+        usage = getattr(response, "usage_metadata", None)
+        logger.info(
+            "interview.ai.message.success stage=%s action=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+            stage,
+            action,
+            getattr(usage, "prompt_token_count", -1) if usage else -1,
+            getattr(usage, "candidates_token_count", -1) if usage else -1,
+            getattr(usage, "total_token_count", -1) if usage else -1,
+        )
         return {
-            "assistant_message": parsed.assistant_message,
-            "intent": parsed.intent or action,
-            "confidence": parsed.confidence.lower() if parsed.confidence in ["low", "medium", "high"] else "medium"
+            "assistant_message": str(parsed.assistant_message),
+            "intent": str(parsed.intent or action),
+            "confidence": (
+                str(parsed.confidence).lower()
+                if str(parsed.confidence).lower() in ["low", "medium", "high"]
+                else "medium"
+            ),
         }
     except Exception as exc:
-        logger.exception("Gemini failed")
+        logger.exception("interview.ai.message.failure stage=%s action=%s", stage, action)
+        if _is_strict_mode():
+            raise InterviewAIError(f"Gemini message generation failed: {type(exc).__name__}") from exc
         return fallback
 
 def evaluate_stage_rubric(
     stage: InterviewStage,
-    stage_messages: list[dict[str, str]],
+    stage_messages: list[ChatTurn],
 ) -> dict[str, Any]:
     client = _build_client()
-    if not client: return _fallback_rubric(stage)
+    if not client:
+        logger.error("interview.ai.rubric.client_unavailable stage=%s", stage)
+        if _is_strict_mode():
+            raise InterviewAIError("Gemini client unavailable for rubric evaluation.")
+        return _fallback_rubric(stage)
 
-    transcript = "\n".join([f"{m['role']}: {m['content']}" for m in stage_messages[-10:]])
+    transcript = "\n".join(
+        [f"{str(m['role'])}: {str(m['content'])}" for m in stage_messages[-10:]]
+    )
     
     prompt = f"Evaluate the following interview transcript for the stage: {stage}\n\nTranscript:\n{transcript}"
 
     try:
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=GEMINI_MODEL_CHAT,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction="Evaluate performance. Scores 0-2.",
@@ -104,8 +140,22 @@ def evaluate_stage_rubric(
             ),
         )
         # Convert Pydantic model to dict for your existing frontend/logic
-        return response.parsed.model_dump()
-    except Exception:
+        usage = getattr(response, "usage_metadata", None)
+        logger.info(
+            "interview.ai.rubric.success stage=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+            stage,
+            getattr(usage, "prompt_token_count", -1) if usage else -1,
+            getattr(usage, "candidates_token_count", -1) if usage else -1,
+            getattr(usage, "total_token_count", -1) if usage else -1,
+        )
+        parsed = cast(RubricResponse | None, response.parsed)
+        if parsed is None:
+            raise InterviewAIError("Gemini returned no parsed rubric payload.")
+        return parsed.model_dump()
+    except Exception as exc:
+        logger.exception("interview.ai.rubric.failure stage=%s", stage)
+        if _is_strict_mode():
+            raise InterviewAIError(f"Gemini rubric evaluation failed: {type(exc).__name__}") from exc
         return _fallback_rubric(stage)
 
 def _build_client():

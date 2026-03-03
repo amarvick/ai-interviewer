@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 from time import perf_counter
+from typing import Any, cast
 from app.core.constants import InterviewStage
 from app.crud.interview import (
     create_interview_evaluation,
@@ -18,6 +19,24 @@ from app.services.interview_ai_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _as_stage(value: Any) -> InterviewStage:
+    stage = str(value)
+    valid: set[str] = {
+        "INTRO",
+        "CLARIFICATION",
+        "APPROACH_DISCUSSION",
+        "PSEUDOCODE",
+        "CODING",
+        "COMPLEXITY_DISCUSSION",
+        "FOLLOW_UP",
+        "FEEDBACK",
+        "COMPLETE",
+    }
+    if stage not in valid:
+        return "INTRO"
+    return cast(InterviewStage, stage)
 
 
 def start_interview_session(db, user_id: str, problem_id: str):
@@ -40,7 +59,7 @@ def start_interview_session(db, user_id: str, problem_id: str):
             "Welcome to the interview. Briefly restate the problem in your own words "
             "and ask one clarifying question."
         ),
-        stage_at_message=session.stage,
+        stage_at_message=_as_stage(session.stage),
         user_id=None,
     )
     db.commit()
@@ -84,18 +103,19 @@ def process_interview_message(
         user_id=user_id,
         role="user",
         content=content,
-        stage_at_message=session.stage,
+        stage_at_message=_as_stage(session.stage),
     )
 
     session = get_interview_session_by_id(db, session_id)
     if session is None:
         return None
 
-    current_stage: InterviewStage = session.stage
+    current_stage: InterviewStage = _as_stage(session.stage)
     user_turns_in_stage = sum(
         1
         for message in session.messages
-        if message.role == "user" and message.stage_at_message == current_stage
+        if str(message.role) == "user"
+        and _as_stage(message.stage_at_message) == current_stage
     )
     decision = decide_stage_transition(
         current_stage=current_stage,
@@ -106,8 +126,8 @@ def process_interview_message(
         has_submission=has_submission,
     )
 
-    previous_stage = session.stage
-    session.stage = decision.next_stage
+    previous_stage: InterviewStage = _as_stage(session.stage)
+    setattr(session, "stage", decision.next_stage)
     session.stuck_signal_count = decision.stuck_signal_count
 
     if decision.action == "nudge":
@@ -140,7 +160,7 @@ def process_interview_message(
         stage_messages = [
             {"role": message.role, "content": message.content}
             for message in session.messages
-            if message.stage_at_message == previous_stage
+            if _as_stage(message.stage_at_message) == previous_stage
         ]
         rubric = evaluate_stage_rubric(stage=previous_stage, stage_messages=stage_messages)
         category_total = (
@@ -175,7 +195,7 @@ def process_interview_message(
         session_id=session.id,
         role="assistant",
         content=ai_message_payload["assistant_message"],
-        stage_at_message=session.stage,
+        stage_at_message=_as_stage(session.stage),
         user_id=None,
     )
 
@@ -224,7 +244,7 @@ def complete_interview_session(
 
     session.final_score = round(float(computed_score), 2)
     session.status = "COMPLETED"
-    session.stage = "COMPLETE"
+    setattr(session, "stage", "COMPLETE")
     session.completed_at = datetime.utcnow()
     db.commit()
     refreshed = get_interview_session_by_id(db, session.id)
@@ -243,7 +263,7 @@ def complete_interview_session(
         "id": refreshed.id,
         "user_id": refreshed.user_id,
         "problem_id": refreshed.problem_id,
-        "stage": refreshed.stage,
+        "stage": _as_stage(refreshed.stage),
         "status": refreshed.status,
         "final_score": refreshed.final_score,
         "stuck_signal_count": refreshed.stuck_signal_count,
