@@ -35,6 +35,7 @@ class InterviewMessageCreate(BaseModel):
     content: str
     role: InterviewMessageRole = "user"
     has_submission: bool = False
+    current_code: str | None = None
 
 
 class InterviewEvaluationCreate(BaseModel):

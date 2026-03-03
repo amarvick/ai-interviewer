@@ -13,7 +13,9 @@ from app.crud.interview import (
 )
 from app.crud.problem import get_problem_by_id
 from app.services.interview_stage_engine import decide_stage_transition
+from app.services.interview_stage_engine import StageDecision
 from app.services.interview_ai_service import (
+    assess_stage_readiness,
     evaluate_stage_rubric,
     generate_next_interviewer_message,
 )
@@ -79,6 +81,7 @@ def process_interview_message(
     user_id: str,
     content: str,
     has_submission: bool,
+    current_code: str | None = None,
 ):
     start_time = perf_counter()
     session = get_interview_session_by_id(db, session_id)
@@ -125,44 +128,75 @@ def process_interview_message(
         nudges_used_in_stage=session.nudges_used_in_stage,
         has_submission=has_submission,
     )
+    recent_context_for_readiness = _build_recent_context(db, session.id)
+    readiness = {
+        "ready_to_advance": False,
+        "confidence": "medium",
+        "reason": "not_requested",
+    }
+    effective_decision = decision
+    if decision.action == "advance":
+        readiness = assess_stage_readiness(
+            stage=current_stage,
+            recent_messages=recent_context_for_readiness,
+            current_code=current_code,
+        )
+        ai_allows_advance = bool(readiness["ready_to_advance"]) and str(
+            readiness["confidence"]
+        ) != "low"
+        if not ai_allows_advance:
+            effective_decision = StageDecision(
+                next_stage=current_stage,
+                action="nudge",
+                should_score_stage=False,
+                stuck_signal_count=decision.stuck_signal_count,
+                nudge_reason="ai_not_ready_to_advance",
+            )
 
     previous_stage: InterviewStage = _as_stage(session.stage)
-    setattr(session, "stage", decision.next_stage)
-    session.stuck_signal_count = decision.stuck_signal_count
+    setattr(session, "stage", effective_decision.next_stage)
+    session.stuck_signal_count = effective_decision.stuck_signal_count
 
-    if decision.action == "nudge":
+    if effective_decision.action == "nudge":
         session.nudges_used_in_stage += 1
-    elif decision.action == "advance":
+    elif effective_decision.action == "advance":
         session.nudges_used_in_stage = 0
-    elif decision.action == "stay":
+    elif effective_decision.action == "stay":
         session.nudges_used_in_stage = session.nudges_used_in_stage
 
-    if decision.next_stage == "COMPLETE":
+    if effective_decision.next_stage == "COMPLETE":
         session.status = "COMPLETED"
         session.completed_at = datetime.utcnow()
 
     logger.info(
         "interview.stage.transition session_id=%s user_id=%s from_stage=%s to_stage=%s action=%s "
-        "turns_in_stage=%s stuck_signals=%s nudges_used=%s score_stage=%s has_submission=%s",
+        "turns_in_stage=%s stuck_signals=%s nudges_used=%s score_stage=%s has_submission=%s "
+        "ai_ready_to_advance=%s ai_confidence=%s",
         session.id,
         user_id,
         previous_stage,
-        decision.next_stage,
-        decision.action,
+        effective_decision.next_stage,
+        effective_decision.action,
         user_turns_in_stage,
         session.stuck_signal_count,
         session.nudges_used_in_stage,
-        decision.should_score_stage,
+        effective_decision.should_score_stage,
         has_submission,
+        readiness["ready_to_advance"],
+        readiness["confidence"],
     )
 
-    if decision.should_score_stage:
+    if effective_decision.should_score_stage:
         stage_messages = [
             {"role": message.role, "content": message.content}
             for message in session.messages
             if _as_stage(message.stage_at_message) == previous_stage
         ]
-        rubric = evaluate_stage_rubric(stage=previous_stage, stage_messages=stage_messages)
+        rubric = evaluate_stage_rubric(
+            stage=previous_stage,
+            stage_messages=stage_messages,
+            current_code=current_code,
+        )
         category_total = (
             rubric["problem_understanding_score"]
             + rubric["approach_quality_score"]
@@ -186,9 +220,10 @@ def process_interview_message(
         )
 
     ai_message_payload = generate_next_interviewer_message(
-        action=decision.action,
-        stage=decision.next_stage,
+        action=effective_decision.action,
+        stage=effective_decision.next_stage,
         recent_messages=_build_recent_context(db, session.id),
+        current_code=current_code,
     )
     create_interview_message(
         db=db,

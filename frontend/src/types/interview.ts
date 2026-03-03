@@ -72,4 +72,5 @@ export interface InterviewMessagePayload {
   content: string;
   role?: "user";
   has_submission?: boolean;
+  current_code?: string;
 }

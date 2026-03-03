@@ -122,6 +122,7 @@ def post_interview_message(
             user_id=current_user.id,
             content=payload.content,
             has_submission=payload.has_submission,
+            current_code=payload.current_code,
         )
     except InterviewAIError as exc:
         logger.warning(
