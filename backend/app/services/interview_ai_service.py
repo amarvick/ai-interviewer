@@ -4,13 +4,11 @@ from typing import Any, TypedDict, cast
 
 from google import genai
 from google.genai import types
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.config import INTERVIEW_AI_MODE, GEMINI_API_KEY, GEMINI_MODEL_CHAT
-from app.core.constants import InterviewAction, InterviewStage
 
 logger = logging.getLogger(__name__)
-
 
 class InterviewAIError(RuntimeError):
     pass
@@ -19,10 +17,18 @@ class ChatTurn(TypedDict):
     role: str
     content: str
 
-# --- Pydantic Schemas for Strict JSON ---
+# TODO - put these in schemas
+
+class InterviewChecklist(BaseModel):
+    clarified_constraints: bool = Field(description="User understands input/output and edge cases")
+    proposed_approach: bool = Field(description="User explained the high-level logic and algorithm")
+    complexity_analyzed: bool = Field(description="User discussed Big-O Time and Space complexity")
+    ready_to_code: bool = Field(description="Set to true ONLY when all above are True")
+
 class InterviewerResponse(BaseModel):
-    assistant_message: str
-    intent: str
+    assistant_message: str = Field(description="The text shown to the candidate")
+    checklist_status: InterviewChecklist
+    internal_thought: str = Field(description="Your reasoning for why you are asking this specific question")
     confidence: str # low, medium, high
 
 class RubricResponse(BaseModel):
@@ -33,66 +39,26 @@ class RubricResponse(BaseModel):
     communication_clarity_score: int
     summary: str
 
-
-class StageReadinessResponse(BaseModel):
-    ready_to_advance: bool
-    confidence: str  # low, medium, high
-    reason: str
-
-
 def generate_next_interviewer_message(
-    stage: InterviewStage,
-    action: InterviewAction,
     recent_messages: list[ChatTurn],
     current_code: str | None = None,
 ) -> dict[str, Any]:
-    fallback = _fallback_interviewer_message(stage=stage, action=action)
     client = _build_client()
-    
     if not client:
-        logger.error(
-            "interview.ai.message.client_unavailable stage=%s action=%s",
-            stage,
-            action,
-        )
-        if _is_strict_mode():
-            raise InterviewAIError("Gemini client unavailable. Check GEMINI_API_KEY and package setup.")
-        return fallback
+        if _is_strict_mode(): raise InterviewAIError("Gemini API key missing.")
+        return _fallback_interviewer_message()
 
     system_instruction = (
-        "You are a concise technical interviewer. Ask at most one question. "
-        "Keep reply under 80 words. Do not provide solutions unless asked."
+        "You are an elite Technical Interviewer. Guide the candidate through a LeetCode interview.\n\n"
+        "GOAL: Ensure the candidate explains the problem, edge cases, and complexity BEFORE they start coding.\n"
+        "RULES:\n"
+        "1. PROACTIVITY: If they code too early, ask them to discuss complexity first.\n"
+        "2. CONCISENESS: Keep responses under 60 words.\n"
+        "3. STATE: Update the 'checklist_status' based on the history.\n"
+        "4. NO SPOILERS: Never provide the full solution code."
     )
 
-    # Convert messages to Gemini format (user/model instead of user/assistant)
-    contents = []
-    for m in recent_messages[-8:]:
-        role = "user" if str(m["role"]) == "user" else "model"
-        content_text = str(m["content"])
-        contents.append(
-            types.Content(role=role, parts=[types.Part.from_text(text=content_text)])
-        )
-    
-    # Add the current "hidden" nudge from the engine
-    contents.append(types.Content(
-        role="user", 
-        parts=[types.Part.from_text(text=f"Current stage: {stage}. Action: {action}.")]
-    ))
-    code_snapshot = _trim_code_context(current_code)
-    if code_snapshot:
-        contents.append(
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(
-                        text=(
-                            "Candidate current code snapshot (may include comments/notes):\n"
-                            f"```text\n{code_snapshot}\n```"
-                        )
-                    )
-                ],
-            )
-        )
+    contents = _prepare_contents(recent_messages, current_code)
 
     try:
         response = client.models.generate_content(
@@ -101,295 +67,111 @@ def generate_next_interviewer_message(
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.4,
-                # This enforces the JSON structure perfectly
                 response_mime_type="application/json",
                 response_schema=InterviewerResponse,
             ),
         )
         
-        # Gemini returns parsed objects directly if response_schema is provided
-        parsed = cast(InterviewerResponse | None, response.parsed)
-        if parsed is None:
-            raise InterviewAIError("Gemini returned no parsed interviewer payload.")
-        usage = getattr(response, "usage_metadata", None)
-        logger.info(
-            "interview.ai.message.success stage=%s action=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
-            stage,
-            action,
-            getattr(usage, "prompt_token_count", -1) if usage else -1,
-            getattr(usage, "candidates_token_count", -1) if usage else -1,
-            getattr(usage, "total_token_count", -1) if usage else -1,
-        )
+        parsed = cast(InterviewerResponse, response.parsed)
+        _log_usage(response, "interview_chat")
+
         return {
-            "assistant_message": str(parsed.assistant_message),
-            "intent": str(parsed.intent or action),
-            "confidence": (
-                str(parsed.confidence).lower()
-                if str(parsed.confidence).lower() in ["low", "medium", "high"]
-                else "medium"
-            ),
+            "assistant_message": parsed.assistant_message,
+            "checklist": parsed.checklist_status.model_dump(),
+            "can_code": parsed.checklist_status.ready_to_code,
+            "internal_thought": parsed.internal_thought
         }
     except Exception as exc:
-        logger.exception("interview.ai.message.failure stage=%s action=%s", stage, action)
-        if _is_strict_mode():
-            raise InterviewAIError(f"Gemini message generation failed: {type(exc).__name__}") from exc
-        return fallback
-
-
-def assess_stage_readiness(
-    stage: InterviewStage,
-    recent_messages: list[ChatTurn],
-    current_code: str | None = None,
-) -> dict[str, Any]:
-    client = _build_client()
-    fallback = {
-        "ready_to_advance": False,
-        "confidence": "medium",
-        "reason": "Fallback readiness assessment used.",
-    }
-    if not client:
-        logger.error("interview.ai.readiness.client_unavailable stage=%s", stage)
-        if _is_strict_mode():
+        logger.exception("Gemini error")
+        if _is_quota_error(exc):
             raise InterviewAIError(
-                "Gemini client unavailable for readiness assessment."
-            )
-        return fallback
-
-    system_instruction = (
-        "You are evaluating interview stage readiness. "
-        "Return JSON only. Be strict: only approve advancement when the candidate has "
-        "shown clear understanding for the current stage."
-    )
-    contents: list[types.Content] = []
-    for message in recent_messages[-8:]:
-        role = "user" if str(message["role"]) == "user" else "model"
-        contents.append(
-            types.Content(
-                role=role,
-                parts=[types.Part.from_text(text=str(message["content"]))],
-            )
-        )
-    contents.append(
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(
-                    text=(
-                        f"Current stage is {stage}. "
-                        "Should we move to the next stage now?"
-                    )
-                )
-            ],
-        )
-    )
-    code_snapshot = _trim_code_context(current_code)
-    if code_snapshot:
-        contents.append(
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(
-                        text=(
-                            "Candidate current code snapshot (may include comments/notes):\n"
-                            f"```text\n{code_snapshot}\n```"
-                        )
-                    )
-                ],
-            )
-        )
-
-    try:
-        response = client.models.generate_content(
-            model=GEMINI_MODEL_CHAT,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.1,
-                response_mime_type="application/json",
-                response_schema=StageReadinessResponse,
-            ),
-        )
-        parsed = cast(StageReadinessResponse | None, response.parsed)
-        if parsed is None:
-            raise InterviewAIError("Gemini returned no parsed readiness payload.")
-
-        confidence = str(parsed.confidence).lower()
-        if confidence not in {"low", "medium", "high"}:
-            confidence = "medium"
-        usage = getattr(response, "usage_metadata", None)
-        logger.info(
-            "interview.ai.readiness.success stage=%s ready=%s confidence=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
-            stage,
-            parsed.ready_to_advance,
-            confidence,
-            getattr(usage, "prompt_token_count", -1) if usage else -1,
-            getattr(usage, "candidates_token_count", -1) if usage else -1,
-            getattr(usage, "total_token_count", -1) if usage else -1,
-        )
-        return {
-            "ready_to_advance": bool(parsed.ready_to_advance),
-            "confidence": confidence,
-            "reason": str(parsed.reason).strip()[:300],
-        }
-    except Exception as exc:
-        logger.exception("interview.ai.readiness.failure stage=%s", stage)
-        if _is_strict_mode():
-            raise InterviewAIError(
-                f"Gemini readiness assessment failed: {type(exc).__name__}"
+                "AI quota exceeded. Please check your Gemini billing/quota and try again."
             ) from exc
-        return fallback
-
+        if _is_strict_mode():
+            raise InterviewAIError(
+                f"Gemini message generation failed: {type(exc).__name__}"
+            ) from exc
+        return _fallback_interviewer_message()
 
 def evaluate_stage_rubric(
-    stage: InterviewStage,
     stage_messages: list[ChatTurn],
     current_code: str | None = None,
 ) -> dict[str, Any]:
     client = _build_client()
-    if not client:
-        logger.error("interview.ai.rubric.client_unavailable stage=%s", stage)
-        if _is_strict_mode():
-            raise InterviewAIError("Gemini client unavailable for rubric evaluation.")
-        return _fallback_rubric(stage)
+    if not client: return _fallback_rubric()
 
-    transcript = "\n".join(
-        [f"{str(m['role'])}: {str(m['content'])}" for m in stage_messages[-10:]]
-    )
-    
-    prompt = f"Evaluate the following interview transcript for the stage: {stage}\n\nTranscript:\n{transcript}"
-    code_snapshot = _trim_code_context(current_code)
-    if code_snapshot:
-        prompt += (
-            "\n\nCandidate current code snapshot (may include comments/notes):\n"
-            f"```text\n{code_snapshot}\n```"
-        )
+    transcript = "\n".join([f"{m['role']}: {m['content']}" for m in stage_messages])
+    code_context = f"\n\nCode Snapshot:\n{current_code}" if current_code else ""
 
     try:
         response = client.models.generate_content(
             model=GEMINI_MODEL_CHAT,
-            contents=prompt,
+            contents=f"Review this transcript and code:\n{transcript}{code_context}",
             config=types.GenerateContentConfig(
-                system_instruction="Evaluate performance. Scores 0-2.",
+                system_instruction="Score 0-2 for each category. Provide a fair, 2-sentence summary.",
                 response_mime_type="application/json",
                 response_schema=RubricResponse,
             ),
         )
-        # Convert Pydantic model to dict for your existing frontend/logic
-        usage = getattr(response, "usage_metadata", None)
-        logger.info(
-            "interview.ai.rubric.success stage=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
-            stage,
-            getattr(usage, "prompt_token_count", -1) if usage else -1,
-            getattr(usage, "candidates_token_count", -1) if usage else -1,
-            getattr(usage, "total_token_count", -1) if usage else -1,
-        )
-        parsed = cast(RubricResponse | None, response.parsed)
-        if parsed is None:
-            raise InterviewAIError("Gemini returned no parsed rubric payload.")
-        return parsed.model_dump()
+        return cast(RubricResponse, response.parsed).model_dump()
     except Exception as exc:
-        logger.exception("interview.ai.rubric.failure stage=%s", stage)
+        if _is_quota_error(exc):
+            raise InterviewAIError(
+                "AI quota exceeded. Please check your Gemini billing/quota and try again."
+            ) from exc
         if _is_strict_mode():
-            raise InterviewAIError(f"Gemini rubric evaluation failed: {type(exc).__name__}") from exc
-        return _fallback_rubric(stage)
+            raise InterviewAIError(
+                f"Gemini rubric evaluation failed: {type(exc).__name__}"
+            ) from exc
+        return _fallback_rubric()
+
+def _prepare_contents(messages: list[ChatTurn], code: str | None) -> list[types.Content]:
+    contents = []
+    for m in messages[-10:]:
+        role = "user" if m["role"] == "user" else "model"
+        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=m["content"])]))
+    
+    if code:
+        contents.append(types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=f"SYSTEM NOTE: Current Code State:\n{code[:5000]}")]
+        ))
+    return contents
 
 def _build_client():
-    if not GEMINI_API_KEY:
-        return None
-    return genai.Client(api_key=GEMINI_API_KEY)
+    return genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-def _fallback_interviewer_message(
-    stage: InterviewStage,
-    action: InterviewAction,
-) -> dict[str, Any]:
-    if action == "nudge":
-        text = "Take one concrete step. Name your next action and why."
-    elif action == "advance":
-        prompts = {
-            "CLARIFICATION": "Good. What assumptions are you making?",
-            "APPROACH_DISCUSSION": "Explain your high-level approach.",
-            "PSEUDOCODE": "Give concise pseudocode before coding.",
-            "CODING": "Implement now and explain key choices.",
-            "COMPLEXITY_DISCUSSION": "State time and space complexity.",
-            "FOLLOW_UP": "How would you adapt to a stricter constraint?",
-            "FEEDBACK": "Give a short self-review of your performance.",
-            "COMPLETE": "Interview complete. Nice work.",
-            "INTRO": "Please restate the problem and ask one clarification.",
-        }
-        text = prompts.get(stage, "Continue.")
-    elif action == "stay":
-        text = "Interview is complete."
-    else:
-        text = "Can you elaborate in one or two concise points?"
-
-    return {
-        "assistant_message": text,
-        "intent": action,
-        "confidence": "medium",
-    }
-
-
-def _fallback_rubric(stage: InterviewStage) -> dict[str, Any]:
-    _ = stage
-    return {
-        "problem_understanding_score": 0,
-        "approach_quality_score": 0,
-        "code_correctness_reasoning_score": 0,
-        "complexity_analysis_score": 0,
-        "communication_clarity_score": 0,
-        "summary": "Automatic rubric fallback used (LLM unavailable).",
-    }
-
-
-def _normalize_rubric(raw: dict[str, Any]) -> dict[str, Any]:
-    def score(key: str) -> int:
-        value = raw.get(key, 0)
-        try:
-            parsed = int(value)
-        except (TypeError, ValueError):
-            parsed = 0
-        return max(0, min(2, parsed))
-
-    return {
-        "problem_understanding_score": score("problem_understanding_score"),
-        "approach_quality_score": score("approach_quality_score"),
-        "code_correctness_reasoning_score": score("code_correctness_reasoning_score"),
-        "complexity_analysis_score": score("complexity_analysis_score"),
-        "communication_clarity_score": score("communication_clarity_score"),
-        "summary": str(raw.get("summary", "")).strip()[:500],
-    }
-
-
-def _extract_usage(completion: Any) -> dict[str, int]:
-    usage = getattr(completion, "usage", None)
-    if usage is None:
-        return {"prompt_tokens": -1, "completion_tokens": -1, "total_tokens": -1}
-
-    if isinstance(usage, dict):
-        prompt_tokens = int(usage.get("prompt_tokens", -1))
-        completion_tokens = int(usage.get("completion_tokens", -1))
-        total_tokens = int(usage.get("total_tokens", -1))
-        return {
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": total_tokens,
-        }
-
-    return {
-        "prompt_tokens": int(getattr(usage, "prompt_tokens", -1)),
-        "completion_tokens": int(getattr(usage, "completion_tokens", -1)),
-        "total_tokens": int(getattr(usage, "total_tokens", -1)),
-    }
-
+def _log_usage(response: Any, label: str):
+    usage = getattr(response, "usage_metadata", None)
+    if usage:
+        logger.info(f"Gemini Usage [{label}]: {usage.total_token_count} tokens")
 
 def _is_strict_mode() -> bool:
     return INTERVIEW_AI_MODE == "strict"
 
 
-def _trim_code_context(current_code: str | None, limit: int = 12000) -> str:
-    if not current_code:
-        return ""
-    trimmed = current_code.strip()
-    if len(trimmed) <= limit:
-        return trimmed
-    return trimmed[:limit] + "\n...<truncated>..."
+def _is_quota_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    markers = (
+        "quota",
+        "resource_exhausted",
+        "rate limit",
+        "429",
+        "insufficient",
+        "billing",
+    )
+    return any(marker in text for marker in markers)
+
+def _fallback_interviewer_message() -> dict[str, Any]:
+    return {
+        "assistant_message": "Tell me more about your approach.",
+        "checklist": {"clarified_constraints": False, "proposed_approach": False, "complexity_analyzed": False, "ready_to_code": False},
+        "can_code": False
+    }
+
+def _fallback_rubric() -> dict[str, Any]:
+    return {
+        "problem_understanding_score": 0, "approach_quality_score": 0,
+        "code_correctness_reasoning_score": 0, "complexity_analysis_score": 0,
+        "communication_clarity_score": 0, "summary": "Evaluation failed."
+    }

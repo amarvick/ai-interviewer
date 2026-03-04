@@ -36,6 +36,7 @@ class InterviewMessageCreate(BaseModel):
     role: InterviewMessageRole = "user"
     has_submission: bool = False
     current_code: str | None = None
+    chat_history: list[dict[str, str]] = Field(default_factory=list)
 
 
 class InterviewEvaluationCreate(BaseModel):
@@ -104,6 +105,7 @@ class InterviewSessionResponse(BaseModel):
 class InterviewSessionDetailResponse(InterviewSessionResponse):
     messages: list[InterviewMessageResponse] = Field(default_factory=list)
     evaluations: list[InterviewEvaluationResponse] = Field(default_factory=list)
+    can_code: bool = False
 
 
 class InterviewCompletionResponse(InterviewSessionResponse):

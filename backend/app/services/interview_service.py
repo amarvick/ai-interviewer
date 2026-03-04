@@ -13,9 +13,7 @@ from app.crud.interview import (
 )
 from app.crud.problem import get_problem_by_id
 from app.services.interview_stage_engine import decide_stage_transition
-from app.services.interview_stage_engine import StageDecision
 from app.services.interview_ai_service import (
-    assess_stage_readiness,
     evaluate_stage_rubric,
     generate_next_interviewer_message,
 )
@@ -82,6 +80,7 @@ def process_interview_message(
     content: str,
     has_submission: bool,
     current_code: str | None = None,
+    chat_history: list[dict[str, str]] | None = None,
 ):
     start_time = perf_counter()
     session = get_interview_session_by_id(db, session_id)
@@ -128,30 +127,7 @@ def process_interview_message(
         nudges_used_in_stage=session.nudges_used_in_stage,
         has_submission=has_submission,
     )
-    recent_context_for_readiness = _build_recent_context(db, session.id)
-    readiness = {
-        "ready_to_advance": False,
-        "confidence": "medium",
-        "reason": "not_requested",
-    }
     effective_decision = decision
-    if decision.action == "advance":
-        readiness = assess_stage_readiness(
-            stage=current_stage,
-            recent_messages=recent_context_for_readiness,
-            current_code=current_code,
-        )
-        ai_allows_advance = bool(readiness["ready_to_advance"]) and str(
-            readiness["confidence"]
-        ) != "low"
-        if not ai_allows_advance:
-            effective_decision = StageDecision(
-                next_stage=current_stage,
-                action="nudge",
-                should_score_stage=False,
-                stuck_signal_count=decision.stuck_signal_count,
-                nudge_reason="ai_not_ready_to_advance",
-            )
 
     previous_stage: InterviewStage = _as_stage(session.stage)
     setattr(session, "stage", effective_decision.next_stage)
@@ -170,8 +146,7 @@ def process_interview_message(
 
     logger.info(
         "interview.stage.transition session_id=%s user_id=%s from_stage=%s to_stage=%s action=%s "
-        "turns_in_stage=%s stuck_signals=%s nudges_used=%s score_stage=%s has_submission=%s "
-        "ai_ready_to_advance=%s ai_confidence=%s",
+        "turns_in_stage=%s stuck_signals=%s nudges_used=%s score_stage=%s has_submission=%s",
         session.id,
         user_id,
         previous_stage,
@@ -182,8 +157,6 @@ def process_interview_message(
         session.nudges_used_in_stage,
         effective_decision.should_score_stage,
         has_submission,
-        readiness["ready_to_advance"],
-        readiness["confidence"],
     )
 
     if effective_decision.should_score_stage:
@@ -193,7 +166,6 @@ def process_interview_message(
             if _as_stage(message.stage_at_message) == previous_stage
         ]
         rubric = evaluate_stage_rubric(
-            stage=previous_stage,
             stage_messages=stage_messages,
             current_code=current_code,
         )
@@ -219,10 +191,10 @@ def process_interview_message(
             rubric_json={"source": "llm_eval", "stage": previous_stage, **rubric},
         )
 
+    full_history = _normalize_chat_history(chat_history)
+    ai_context = full_history if full_history else _build_recent_context(db, session.id)
     ai_message_payload = generate_next_interviewer_message(
-        action=effective_decision.action,
-        stage=effective_decision.next_stage,
-        recent_messages=_build_recent_context(db, session.id),
+        recent_messages=ai_context,
         current_code=current_code,
     )
     create_interview_message(
@@ -242,7 +214,13 @@ def process_interview_message(
         session.stage,
         int((perf_counter() - start_time) * 1000),
     )
-    return get_interview_session_by_id(db, session.id)
+    refreshed = get_interview_session_by_id(db, session.id)
+    if refreshed is None:
+        return None
+    return _serialize_session_detail(
+        refreshed,
+        can_code=bool(ai_message_payload.get("can_code", False)),
+    )
 
 
 def complete_interview_session(
@@ -335,6 +313,41 @@ def _build_recent_context(db, session_id: str) -> list[dict[str, str]]:
             },
         )
     return context
+
+
+def _normalize_chat_history(
+    chat_history: list[dict[str, str]] | None,
+) -> list[dict[str, str]]:
+    if not chat_history:
+        return []
+    normalized: list[dict[str, str]] = []
+    for turn in chat_history:
+        role = str(turn.get("role", "")).strip().lower()
+        content = str(turn.get("content", "")).strip()
+        if role not in {"user", "assistant", "system"} or not content:
+            continue
+        normalized.append({"role": role, "content": content})
+    return normalized
+
+
+def _serialize_session_detail(session, can_code: bool) -> dict[str, Any]:
+    return {
+        "id": session.id,
+        "user_id": session.user_id,
+        "problem_id": session.problem_id,
+        "stage": _as_stage(session.stage),
+        "status": session.status,
+        "final_score": session.final_score,
+        "stuck_signal_count": session.stuck_signal_count,
+        "nudges_used_in_stage": session.nudges_used_in_stage,
+        "started_at": session.started_at,
+        "completed_at": session.completed_at,
+        "created_at": session.created_at,
+        "updated_at": session.updated_at,
+        "messages": session.messages,
+        "evaluations": session.evaluations,
+        "can_code": can_code,
+    }
 
 
 def _build_final_feedback(evaluations: list) -> dict[str, list[str]]:

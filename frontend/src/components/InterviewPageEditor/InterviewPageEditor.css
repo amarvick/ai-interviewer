@@ -1,9 +1,34 @@
 .interview-editor-stack {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 0.55rem;
   height: 100%;
   min-height: 0;
+  min-width: 0;
+}
+
+.editor-panel {
+  min-width: 0;
+  min-height: 0;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    filter 220ms ease;
+}
+
+.editor-panel-locked {
+  border-color: rgba(132, 153, 219, 0.18);
+  filter: grayscale(0.35) saturate(0.88);
+}
+
+.editor-panel-active {
+  border-color: rgba(88, 176, 152, 0.75);
+  box-shadow: 0 0 0 1px rgba(88, 176, 152, 0.15);
+  filter: grayscale(0) saturate(1);
+}
+
+.editor-shell-locked {
+  pointer-events: none;
 }
 
 .interview-chat-panel {
@@ -12,7 +37,7 @@
   background: rgba(8, 13, 28, 0.82);
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 280px;
 }
 
@@ -22,62 +47,13 @@
   color: #d7e4ff;
   font-weight: 600;
   background: rgba(10, 16, 34, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.interview-chat-header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.stage-pill {
-  border: 1px solid rgba(120, 153, 255, 0.45);
-  border-radius: 999px;
-  padding: 0.16rem 0.5rem;
-  font-size: 0.72rem;
-  color: #c9d9ff;
-  background: rgba(35, 58, 118, 0.45);
-}
-
-.status-pill {
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  font-size: 0.66rem;
-}
-
-.interview-panel-tabs {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.65rem;
-  border-bottom: 1px solid rgba(132, 153, 219, 0.22);
-  background: rgba(9, 14, 30, 0.92);
-}
-
-.interview-tab {
-  border: 1px solid rgba(132, 153, 219, 0.25);
-  border-radius: 8px;
-  background: rgba(12, 19, 39, 0.72);
-  color: #c9d9ff;
-  font-size: 0.82rem;
-  padding: 0.3rem 0.65rem;
-  cursor: pointer;
-}
-
-.interview-tab.active {
-  border-color: rgba(88, 176, 152, 0.7);
-  background: rgba(16, 48, 40, 0.75);
-  color: #dcf9ef;
 }
 
 .interview-chat-messages {
   overflow: auto;
   padding: 0.75rem;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.55rem;
 }
 
@@ -159,49 +135,9 @@
   font-size: 0.82rem;
 }
 
-.interview-results-panel {
-  min-height: 0;
-  overflow: auto;
-  padding: 0.75rem;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.interview-results-actions button {
-  border: 1px solid rgba(174, 192, 255, 0.4);
-  border-radius: 8px;
-  background: linear-gradient(
-    90deg,
-    rgba(49, 76, 157, 0.8),
-    rgba(57, 108, 157, 0.75)
-  );
-  color: #f5f8ff;
-  padding: 0.45rem 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.interview-results-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.interview-results-content,
-.interview-results-history {
-  border: 1px solid rgba(132, 153, 219, 0.25);
-  border-radius: 10px;
-  padding: 0.55rem 0.7rem;
-  background: rgba(12, 19, 39, 0.82);
-  color: #d0ddff;
-}
-
-.results-heading {
-  margin: 0 0 0.35rem;
-  color: #bcd0ff;
-  font-weight: 600;
-}
-
-.results-list {
-  margin: 0;
-  padding-left: 1.2rem;
+@media (max-width: 1280px) {
+  .interview-editor-stack {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 320px;
+  }
 }

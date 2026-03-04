@@ -4,6 +4,7 @@ interface ProblemPageEditorToolbarProps {
   languageOptions: string[];
   onSubmit: () => void;
   isSubmitting: boolean;
+  isSubmitDisabled?: boolean;
   submitLabel?: string;
   submittingLabel?: string;
 }
@@ -21,6 +22,7 @@ export default function ProblemPageEditorToolbar({
   languageOptions,
   onSubmit,
   isSubmitting,
+  isSubmitDisabled = false,
   submitLabel = "Submit",
   submittingLabel = "Submitting...",
 }: ProblemPageEditorToolbarProps) {
@@ -40,7 +42,11 @@ export default function ProblemPageEditorToolbar({
       </select>
 
       <div className="toolbar-actions">
-        <button type="button" onClick={onSubmit} disabled={isSubmitting}>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={isSubmitting || isSubmitDisabled}
+        >
           {isSubmitting ? submittingLabel : submitLabel}
         </button>
       </div>

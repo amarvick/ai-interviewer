@@ -56,6 +56,7 @@ export interface InterviewEvaluationResponse {
 export interface InterviewSessionDetailResponse extends InterviewSessionResponse {
   messages: InterviewMessageResponse[];
   evaluations: InterviewEvaluationResponse[];
+  can_code?: boolean;
 }
 
 export interface InterviewCompletionResponse extends InterviewSessionResponse {
@@ -73,4 +74,5 @@ export interface InterviewMessagePayload {
   role?: "user";
   has_submission?: boolean;
   current_code?: string;
+  chat_history?: Array<{ role: "user" | "assistant"; content: string }>;
 }

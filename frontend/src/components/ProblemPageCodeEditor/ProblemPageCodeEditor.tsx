@@ -4,6 +4,8 @@ interface ProblemPageCodeEditorProps {
   selectedLanguage: string;
   updateCode: (value: string | undefined) => void;
   code: string;
+  readOnly?: boolean;
+  className?: string;
 }
 
 const defineTheme: BeforeMount = (monaco) => {
@@ -36,9 +38,11 @@ export default function ProblemPageCodeEditor({
   selectedLanguage,
   updateCode,
   code,
+  readOnly = false,
+  className,
 }: ProblemPageCodeEditorProps) {
   return (
-    <div className="editor-monaco-wrap">
+    <div className={`editor-monaco-wrap${className ? ` ${className}` : ""}`}>
       <Editor
         height="100%"
         language={selectedLanguage}
@@ -54,6 +58,8 @@ export default function ProblemPageCodeEditor({
           insertSpaces: true,
           smoothScrolling: true,
           padding: { top: 10 },
+          readOnly,
+          domReadOnly: readOnly,
         }}
       />
     </div>

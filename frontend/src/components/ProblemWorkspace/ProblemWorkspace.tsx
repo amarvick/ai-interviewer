@@ -9,12 +9,18 @@ interface ProblemWorkspaceProps {
   problemId: string;
   secondaryComponent: (problem: Problem) => ReactNode;
   workspaceClassName?: string;
+  splitDefaultPrimarySize?: number;
+  splitMinPrimarySize?: number;
+  splitMaxPrimarySize?: number;
 }
 
 export default function ProblemWorkspace({
   problemId,
   secondaryComponent,
   workspaceClassName = "problem-workspace",
+  splitDefaultPrimarySize = 42,
+  splitMinPrimarySize = 28,
+  splitMaxPrimarySize = 72,
 }: ProblemWorkspaceProps) {
   const { data, isLoading, isError, error } = useProblemQuery(problemId);
 
@@ -29,9 +35,9 @@ export default function ProblemWorkspace({
       {!isLoading && !isError && data && (
         <SplitPane
           orientation="vertical"
-          defaultPrimarySize={42}
-          minPrimarySize={28}
-          maxPrimarySize={72}
+          defaultPrimarySize={splitDefaultPrimarySize}
+          minPrimarySize={splitMinPrimarySize}
+          maxPrimarySize={splitMaxPrimarySize}
           className="problem-layout"
           primary={<ProblemPageDescription problem={data} />}
           secondary={secondaryComponent(data)}

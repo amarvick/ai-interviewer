@@ -123,6 +123,7 @@ def post_interview_message(
             content=payload.content,
             has_submission=payload.has_submission,
             current_code=payload.current_code,
+            chat_history=payload.chat_history,
         )
     except InterviewAIError as exc:
         logger.warning(
@@ -140,11 +141,12 @@ def post_interview_message(
         )
         raise HTTPException(status_code=404, detail="Interview session not found")
     latency_ms = int((perf_counter() - start_time) * 1000)
+    stage = session.get("stage") if isinstance(session, dict) else session.stage
     logger.info(
         "interview.message.success user_id=%s session_id=%s stage=%s latency_ms=%s",
         current_user.id,
         session_id,
-        session.stage,
+        stage,
         latency_ms,
     )
     return session
