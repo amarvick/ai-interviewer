@@ -49,7 +49,7 @@ def generate_next_interviewer_message(
         return _fallback_interviewer_message()
 
     system_instruction = (
-        "You are an elite Technical Interviewer. Guide the candidate through a LeetCode interview.\n\n"
+        "You are an elite Technical Interviewer. Guide the candidate through an algorithm interview.\n\n"
         "GOAL: Ensure the candidate explains the problem, edge cases, and complexity BEFORE they start coding.\n"
         "RULES:\n"
         "1. PROACTIVITY: If they code too early, ask them to discuss complexity first.\n"
@@ -98,7 +98,8 @@ def evaluate_stage_rubric(
     current_code: str | None = None,
 ) -> dict[str, Any]:
     client = _build_client()
-    if not client: return _fallback_rubric()
+    if not client:
+        return _fallback_rubric("Rubric evaluator unavailable.")
 
     transcript = "\n".join([f"{m['role']}: {m['content']}" for m in stage_messages])
     code_context = f"\n\nCode Snapshot:\n{current_code}" if current_code else ""
@@ -108,13 +109,21 @@ def evaluate_stage_rubric(
             model=GEMINI_MODEL_CHAT,
             contents=f"Review this transcript and code:\n{transcript}{code_context}",
             config=types.GenerateContentConfig(
-                system_instruction="Score 0-2 for each category. Provide a fair, 2-sentence summary.",
+                system_instruction=(
+                    "Score 0-2 for each category and return strict JSON only. "
+                    "Do not omit any field."
+                ),
                 response_mime_type="application/json",
                 response_schema=RubricResponse,
             ),
         )
-        return cast(RubricResponse, response.parsed).model_dump()
+        parsed = cast(RubricResponse | None, response.parsed)
+        if parsed is None:
+            raise ValueError("Missing parsed rubric response")
+        _log_usage(response, "interview_rubric")
+        return _normalize_rubric(parsed.model_dump())
     except Exception as exc:
+        logger.exception("Gemini rubric evaluation failed")
         if _is_quota_error(exc):
             raise InterviewAIError(
                 "AI quota exceeded. Please check your Gemini billing/quota and try again."
@@ -123,7 +132,7 @@ def evaluate_stage_rubric(
             raise InterviewAIError(
                 f"Gemini rubric evaluation failed: {type(exc).__name__}"
             ) from exc
-        return _fallback_rubric()
+        return _fallback_rubric(f"Automatic fallback used ({type(exc).__name__}).")
 
 def _prepare_contents(messages: list[ChatTurn], code: str | None) -> list[types.Content]:
     contents = []
@@ -169,9 +178,44 @@ def _fallback_interviewer_message() -> dict[str, Any]:
         "can_code": False
     }
 
-def _fallback_rubric() -> dict[str, Any]:
+def _fallback_rubric(reason: str | None = None) -> dict[str, Any]:
+    summary = (
+        reason
+        if reason
+        else "Automatic rubric fallback used."
+    )
     return {
-        "problem_understanding_score": 0, "approach_quality_score": 0,
-        "code_correctness_reasoning_score": 0, "complexity_analysis_score": 0,
-        "communication_clarity_score": 0, "summary": "Evaluation failed."
+        "problem_understanding_score": 1,
+        "approach_quality_score": 1,
+        "code_correctness_reasoning_score": 1,
+        "complexity_analysis_score": 1,
+        "communication_clarity_score": 1,
+        "summary": summary,
     }
+
+
+def _normalize_rubric(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "problem_understanding_score": _coerce_score(
+            raw.get("problem_understanding_score")
+        ),
+        "approach_quality_score": _coerce_score(raw.get("approach_quality_score")),
+        "code_correctness_reasoning_score": _coerce_score(
+            raw.get("code_correctness_reasoning_score")
+        ),
+        "complexity_analysis_score": _coerce_score(
+            raw.get("complexity_analysis_score")
+        ),
+        "communication_clarity_score": _coerce_score(
+            raw.get("communication_clarity_score")
+        ),
+        "summary": str(raw.get("summary", "")).strip()[:500],
+    }
+
+
+def _coerce_score(value: Any) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = 1
+    return max(0, min(2, parsed))

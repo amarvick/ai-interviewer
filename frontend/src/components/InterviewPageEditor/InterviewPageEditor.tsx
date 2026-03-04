@@ -3,13 +3,19 @@ import type { KeyboardEvent } from "react";
 import type { Problem } from "../../types/problem";
 import ProblemPageCodeEditor from "../ProblemPageCodeEditor/ProblemPageCodeEditor";
 import ProblemPageEditorToolbar from "../ProblemPageEditorToolbar/ProblemPageEditorToolbar";
+import SplitPane from "../SplitPane/SplitPane";
 import {
+  completeInterviewSession,
   getInterviewSession,
   postInterviewMessage,
   runSubmission,
   startInterviewSession,
 } from "../../services/api";
-import type { InterviewSessionDetailResponse } from "../../types/interview";
+import type {
+  InterviewCompletionResponse,
+  InterviewEvaluationResponse,
+  InterviewSessionDetailResponse,
+} from "../../types/interview";
 import "./InterviewPageEditor.css";
 
 interface InterviewPageEditorProps {
@@ -22,6 +28,8 @@ interface ChatMessage {
   content: string;
   createdAt: number;
 }
+
+type InterviewPanelTab = "chat" | "feedback";
 
 export default function InterviewPageEditor({
   problem,
@@ -42,15 +50,26 @@ export default function InterviewPageEditor({
   const [draftMessage, setDraftMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [isEditorUnlocked, setIsEditorUnlocked] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState<"ACTIVE" | "COMPLETED" | "ABANDONED">(
+    "ACTIVE"
+  );
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [activeTab, setActiveTab] = useState<InterviewPanelTab>("chat");
+  const [evaluations, setEvaluations] = useState<InterviewEvaluationResponse[]>([]);
+  const [completionResult, setCompletionResult] =
+    useState<InterviewCompletionResponse | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeSession = async () => {
       setError(null);
-      setIsEditorUnlocked(false);
+      setCanSubmit(false);
+      setCompletionResult(null);
+      setEvaluations([]);
+      setActiveTab("chat");
       try {
         const started = await startInterviewSession({ problem_id: problem.id });
         const detail = await getInterviewSession(started.id);
@@ -79,6 +98,40 @@ export default function InterviewPageEditor({
       inputRef.current?.focus();
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (!isSending) {
+      return;
+    }
+    const container = chatMessagesRef.current;
+    if (!container) {
+      return;
+    }
+    container.scrollTop = container.scrollHeight;
+  }, [isSending]);
+
+  useEffect(() => {
+    if (
+      sessionStatus !== "COMPLETED" ||
+      !sessionId ||
+      completionResult ||
+      isLoadingFeedback
+    ) {
+      return;
+    }
+    const hydrateFeedback = async () => {
+      setIsLoadingFeedback(true);
+      try {
+        const result = await completeInterviewSession(sessionId);
+        setCompletionResult(result);
+      } catch {
+        // keep chat functional if completion fails
+      } finally {
+        setIsLoadingFeedback(false);
+      }
+    };
+    void hydrateFeedback();
+  }, [sessionStatus, completionResult, isLoadingFeedback, sessionId]);
 
   const handleLanguageChange = (nextLanguage: string) => {
     setSelectedLanguage(nextLanguage);
@@ -127,9 +180,7 @@ export default function InterviewPageEditor({
       );
       setDraftMessage(content);
       const message =
-        sendError instanceof Error
-          ? sendError.message
-          : "Failed to send message.";
+        sendError instanceof Error ? sendError.message : "Failed to send message.";
       setError(message);
     } finally {
       setIsSending(false);
@@ -158,15 +209,15 @@ export default function InterviewPageEditor({
               submission.error ?? "Unknown failure"
             }`;
 
-      const nextMessages = sortMessagesByTime([
+      const nextMessages = [
         ...messages,
         {
           id: `submission-${Date.now()}`,
-          role: "you",
+          role: "you" as const,
           content: submissionSummary,
           createdAt: Date.now(),
         },
-      ]);
+      ];
       const detail = await postInterviewMessage(sessionId, {
         content: submissionSummary,
         role: "user",
@@ -195,7 +246,13 @@ export default function InterviewPageEditor({
 
   const applySession = (detail: InterviewSessionDetailResponse) => {
     setSessionId(detail.id);
-    setIsEditorUnlocked((prev) => prev || Boolean(detail.can_code));
+    setSessionStatus(detail.status);
+    setEvaluations(detail.evaluations ?? []);
+    const nextCanSubmit = canSubmit || Boolean(detail.can_code);
+    setCanSubmit(nextCanSubmit);
+    if (detail.status === "COMPLETED") {
+      setActiveTab("feedback");
+    }
     setMessages(
       sortMessagesByTime(
         detail.messages
@@ -212,81 +269,156 @@ export default function InterviewPageEditor({
     );
   };
 
-  return (
-    <div className="interview-editor-stack">
-      <section
-        className={`editor-panel ${
-          isEditorUnlocked ? "editor-panel-active" : "editor-panel-locked"
-        }`}
-        aria-label="Code editor"
-      >
-        <ProblemPageEditorToolbar
-          selectedLanguage={selectedLanguage}
-          handleLanguageChange={handleLanguageChange}
-          languageOptions={languageOptions}
-          onSubmit={handleSubmitCode}
-          isSubmitting={isSubmittingCode}
-          isSubmitDisabled={!isEditorUnlocked}
-          submitLabel="Submit Code"
-          submittingLabel="Submitting..."
-        />
-        <ProblemPageCodeEditor
-          selectedLanguage={selectedLanguage}
-          updateCode={updateCode}
-          code={code}
-          readOnly={!isEditorUnlocked}
-          className={
-            isEditorUnlocked ? "editor-shell-active" : "editor-shell-locked"
-          }
-        />
-      </section>
+  const rubricRows = useMemo(() => summarizeRubric(evaluations), [evaluations]);
+  const nitpicks = useMemo(
+    () => buildNitpicks(rubricRows, completionResult),
+    [rubricRows, completionResult]
+  );
 
-      <section className="interview-chat-panel" aria-label="AI interview panel">
-        <header className="interview-chat-header">
-          <span>AI Interview Panel</span>
-        </header>
-        <div className="interview-chat-messages" ref={chatMessagesRef}>
-          {messages.length === 0 && (
-            <p className="interview-chat-empty">
-              Interview messages will appear here when the session starts.
-            </p>
-          )}
-          {messages.map((message) => (
-            <article
-              key={message.id}
-              className={`chat-bubble ${message.role === "ai" ? "ai" : "you"}`}
-            >
-              <p className="chat-bubble-role">
-                {message.role === "ai" ? "Interviewer" : "You"}
-              </p>
-              <p>{message.content}</p>
-            </article>
-          ))}
-        </div>
-        <footer className="interview-chat-input-wrap">
-          <textarea
-            ref={inputRef}
-            value={draftMessage}
-            onChange={(event) => setDraftMessage(event.target.value)}
-            onKeyDown={handleDraftKeyDown}
-            placeholder="Explain your thinking, ask a clarification, or answer a follow-up..."
-            rows={3}
-          />
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={
-              isSending ||
-              isSubmittingCode ||
-              !sessionId ||
-              !draftMessage.trim()
-            }
-          >
-            {isSending ? "Sending..." : "Send"}
-          </button>
-        </footer>
-        {error && <p className="interview-chat-error">{error}</p>}
-      </section>
+  return (
+    <div className="interview-editor-shell">
+      <SplitPane
+        orientation="vertical"
+        defaultPrimarySize={66}
+        minPrimarySize={46}
+        maxPrimarySize={84}
+        className="interview-inner-split"
+        primary={
+          <section className="editor-panel editor-panel-active" aria-label="Code editor">
+            <ProblemPageEditorToolbar
+              selectedLanguage={selectedLanguage}
+              handleLanguageChange={handleLanguageChange}
+              languageOptions={languageOptions}
+              onSubmit={handleSubmitCode}
+              isSubmitting={isSubmittingCode}
+              isSubmitDisabled={!canSubmit}
+              submitLabel="Submit Code"
+              submittingLabel="Submitting..."
+            />
+            <ProblemPageCodeEditor
+              selectedLanguage={selectedLanguage}
+              updateCode={updateCode}
+              code={code}
+              readOnly={false}
+              className="editor-shell-active"
+            />
+          </section>
+        }
+        secondary={
+          <section className="interview-chat-panel" aria-label="AI interview panel">
+            <header className="interview-chat-header">
+              <span>AI Interview Panel</span>
+            </header>
+            <div className="interview-panel-tabs" role="tablist" aria-label="Interview tabs">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "chat"}
+                className={`interview-tab ${activeTab === "chat" ? "active" : ""}`}
+                onClick={() => setActiveTab("chat")}
+              >
+                Chat
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "feedback"}
+                className={`interview-tab ${activeTab === "feedback" ? "active" : ""}`}
+                onClick={() => setActiveTab("feedback")}
+              >
+                Feedback
+              </button>
+            </div>
+            {activeTab === "chat" ? (
+              <>
+                <div className="interview-chat-messages" ref={chatMessagesRef}>
+                  {messages.length === 0 && (
+                    <p className="interview-chat-empty">
+                      Interview messages will appear here when the session starts.
+                    </p>
+                  )}
+                  {messages.map((message) => (
+                    <article
+                      key={message.id}
+                      className={`chat-bubble ${message.role === "ai" ? "ai" : "you"}`}
+                    >
+                      <p className="chat-bubble-role">
+                        {message.role === "ai" ? "Interviewer" : "You"}
+                      </p>
+                      <p>{message.content}</p>
+                    </article>
+                  ))}
+                </div>
+                <footer className="interview-chat-input-wrap">
+                  <textarea
+                    ref={inputRef}
+                    value={draftMessage}
+                    onChange={(event) => setDraftMessage(event.target.value)}
+                    onKeyDown={handleDraftKeyDown}
+                    placeholder="Explain your thinking, ask a clarification, or answer a follow-up..."
+                    rows={3}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={
+                      isSending ||
+                      isSubmittingCode ||
+                      !sessionId ||
+                      !draftMessage.trim()
+                    }
+                  >
+                    {isSending ? "Sending..." : "Send"}
+                  </button>
+                </footer>
+              </>
+            ) : (
+              <div className="interview-feedback-panel">
+                <h3>Rubric</h3>
+                {rubricRows.length === 0 && (
+                  <p className="interview-chat-empty">
+                    Feedback will appear here once the interview has enough signal.
+                  </p>
+                )}
+                {rubricRows.length > 0 && (
+                  <div className="rubric-table">
+                    {rubricRows.map((row) => (
+                      <div key={row.label} className="rubric-row">
+                        <span>{row.label}</span>
+                        <span>{row.value.toFixed(2)} / 2.00</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {completionResult && (
+                  <div className="feedback-block">
+                    <h4>Summary</h4>
+                    <ul className="feedback-list">
+                      {completionResult.strengths.map((item) => (
+                        <li key={`strength-${item}`}>{item}</li>
+                      ))}
+                    </ul>
+                    <ul className="feedback-list">
+                      {completionResult.gaps.map((item) => (
+                        <li key={`gap-${item}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="feedback-block">
+                  <h4>Additional Improvements</h4>
+                  <ul className="feedback-list">
+                    {nitpicks.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+            {error && <p className="interview-chat-error">{error}</p>}
+          </section>
+        }
+      />
     </div>
   );
 }
@@ -307,4 +439,80 @@ function toChatHistory(
     role: message.role === "ai" ? "assistant" : "user",
     content: message.content,
   }));
+}
+
+function summarizeRubric(evaluations: InterviewEvaluationResponse[]) {
+  if (!evaluations.length) {
+    return [];
+  }
+  const totals = {
+    problem_understanding: 0,
+    approach_quality: 0,
+    correctness_reasoning: 0,
+    complexity_analysis: 0,
+    communication_clarity: 0,
+  };
+  for (const evalItem of evaluations) {
+    totals.problem_understanding += evalItem.problem_understanding_score;
+    totals.approach_quality += evalItem.approach_quality_score;
+    totals.correctness_reasoning += evalItem.code_correctness_reasoning_score;
+    totals.complexity_analysis += evalItem.complexity_analysis_score;
+    totals.communication_clarity += evalItem.communication_clarity_score;
+  }
+  const count = evaluations.length;
+  return [
+    {
+      label: "Problem Understanding",
+      value: totals.problem_understanding / count,
+    },
+    {
+      label: "Approach Quality",
+      value: totals.approach_quality / count,
+    },
+    {
+      label: "Correctness Reasoning",
+      value: totals.correctness_reasoning / count,
+    },
+    {
+      label: "Complexity Analysis",
+      value: totals.complexity_analysis / count,
+    },
+    {
+      label: "Communication Clarity",
+      value: totals.communication_clarity / count,
+    },
+  ];
+}
+
+function buildNitpicks(
+  rubricRows: Array<{ label: string; value: number }>,
+  completionResult: InterviewCompletionResponse | null
+): string[] {
+  const nits: string[] = [];
+  const weakest = [...rubricRows].sort((a, b) => a.value - b.value).slice(0, 2);
+  for (const row of weakest) {
+    if (row.label === "Complexity Analysis") {
+      nits.push(
+        "Quantify complexity per operation, not just final Big-O, to strengthen rigor."
+      );
+    } else if (row.label === "Communication Clarity") {
+      nits.push("Use short structured answers: plan, invariant, complexity, tradeoff.");
+    } else if (row.label === "Correctness Reasoning") {
+      nits.push("Narrate one complete dry run with indices/variables after coding.");
+    } else if (row.label === "Approach Quality") {
+      nits.push("Mention one rejected alternative and why your chosen method is better.");
+    } else if (row.label === "Problem Understanding") {
+      nits.push(
+        "State assumptions and edge cases explicitly before implementation begins."
+      );
+    }
+  }
+  if (completionResult?.next_steps?.length) {
+    nits.push(...completionResult.next_steps.slice(0, 2));
+  }
+  if (!nits.length) {
+    nits.push("Keep explaining invariants while coding to reduce logical slips.");
+    nits.push("Summarize final tradeoffs in one sentence before submission.");
+  }
+  return Array.from(new Set(nits));
 }

@@ -20,7 +20,7 @@ from app.services.interview_ai_service import (
 
 logger = logging.getLogger(__name__)
 
-
+# TODO - put these in consts/utils
 def _as_stage(value: Any) -> InterviewStage:
     stage = str(value)
     valid: set[str] = {
@@ -39,6 +39,25 @@ def _as_stage(value: Any) -> InterviewStage:
     return cast(InterviewStage, stage)
 
 
+def _as_str(value: Any) -> str:
+    return str(value)
+
+
+def _as_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _as_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
 def start_interview_session(db, user_id: str, problem_id: str):
     start_time = perf_counter()
     problem = get_problem_by_id(db, problem_id)
@@ -53,7 +72,7 @@ def start_interview_session(db, user_id: str, problem_id: str):
     session = create_interview_session(db, user_id=user_id, problem_id=problem_id)
     create_interview_message(
         db=db,
-        session_id=session.id,
+        session_id=_as_str(session.id),
         role="assistant",
         content=(
             "Welcome to the interview. Briefly restate the problem in your own words "
@@ -66,11 +85,11 @@ def start_interview_session(db, user_id: str, problem_id: str):
     logger.info(
         "interview.service.start.created user_id=%s session_id=%s problem_id=%s latency_ms=%s",
         user_id,
-        session.id,
+        _as_str(session.id),
         problem_id,
         int((perf_counter() - start_time) * 1000),
     )
-    return get_interview_session_by_id(db, session.id)
+    return get_interview_session_by_id(db, _as_str(session.id))
 
 
 def process_interview_message(
@@ -91,7 +110,7 @@ def process_interview_message(
             user_id,
         )
         return None
-    if session.status == "COMPLETED":
+    if _as_str(session.status) == "COMPLETED":
         logger.info(
             "interview.service.message.already_completed session_id=%s user_id=%s",
             session_id,
@@ -101,7 +120,7 @@ def process_interview_message(
 
     create_interview_message(
         db=db,
-        session_id=session.id,
+        session_id=_as_str(session.id),
         user_id=user_id,
         role="user",
         content=content,
@@ -153,15 +172,15 @@ def process_interview_message(
         effective_decision.next_stage,
         effective_decision.action,
         user_turns_in_stage,
-        session.stuck_signal_count,
-        session.nudges_used_in_stage,
+        _as_int(session.stuck_signal_count),
+        _as_int(session.nudges_used_in_stage),
         effective_decision.should_score_stage,
         has_submission,
     )
 
     if effective_decision.should_score_stage:
         stage_messages = [
-            {"role": message.role, "content": message.content}
+            {"role": _as_str(message.role), "content": _as_str(message.content)}
             for message in session.messages
             if _as_stage(message.stage_at_message) == previous_stage
         ]
@@ -178,7 +197,7 @@ def process_interview_message(
         )
         create_interview_evaluation(
             db=db,
-            session_id=session.id,
+            session_id=_as_str(session.id),
             stage=previous_stage,
             summary=rubric.get("summary", f"Stage {previous_stage} evaluation complete."),
             problem_understanding_score=rubric["problem_understanding_score"],
@@ -192,14 +211,16 @@ def process_interview_message(
         )
 
     full_history = _normalize_chat_history(chat_history)
-    ai_context = full_history if full_history else _build_recent_context(db, session.id)
+    ai_context = (
+        full_history if full_history else _build_recent_context(db, _as_str(session.id))
+    )
     ai_message_payload = generate_next_interviewer_message(
         recent_messages=ai_context,
         current_code=current_code,
     )
     create_interview_message(
         db=db,
-        session_id=session.id,
+        session_id=_as_str(session.id),
         role="assistant",
         content=ai_message_payload["assistant_message"],
         stage_at_message=_as_stage(session.stage),
@@ -214,7 +235,7 @@ def process_interview_message(
         session.stage,
         int((perf_counter() - start_time) * 1000),
     )
-    refreshed = get_interview_session_by_id(db, session.id)
+    refreshed = get_interview_session_by_id(db, _as_str(session.id))
     if refreshed is None:
         return None
     return _serialize_session_detail(
@@ -238,7 +259,7 @@ def complete_interview_session(
             user_id,
         )
         return None
-    if session.user_id != user_id:
+    if _as_str(session.user_id) != user_id:
         logger.warning(
             "interview.service.complete.forbidden session_id=%s user_id=%s owner_user_id=%s",
             session_id,
@@ -247,7 +268,7 @@ def complete_interview_session(
         )
         return None
 
-    evaluations = get_recent_evaluations_by_session_id(db, session.id, limit=500)
+    evaluations = get_recent_evaluations_by_session_id(db, _as_str(session.id), limit=500)
     computed_score = requested_final_score
     if computed_score is None:
         if evaluations:
@@ -260,7 +281,7 @@ def complete_interview_session(
     setattr(session, "stage", "COMPLETE")
     session.completed_at = datetime.utcnow()
     db.commit()
-    refreshed = get_interview_session_by_id(db, session.id)
+    refreshed = get_interview_session_by_id(db, _as_str(session.id))
     if refreshed is None:
         return None
     feedback = _build_final_feedback(evaluations)
@@ -268,19 +289,19 @@ def complete_interview_session(
         "interview.service.complete.completed session_id=%s user_id=%s final_score=%s eval_count=%s latency_ms=%s",
         session.id,
         user_id,
-        session.final_score,
+        _as_float(session.final_score),
         len(evaluations),
         int((perf_counter() - start_time) * 1000),
     )
     return {
         "id": refreshed.id,
-        "user_id": refreshed.user_id,
-        "problem_id": refreshed.problem_id,
+        "user_id": _as_str(refreshed.user_id),
+        "problem_id": _as_str(refreshed.problem_id),
         "stage": _as_stage(refreshed.stage),
-        "status": refreshed.status,
-        "final_score": refreshed.final_score,
-        "stuck_signal_count": refreshed.stuck_signal_count,
-        "nudges_used_in_stage": refreshed.nudges_used_in_stage,
+        "status": _as_str(refreshed.status),
+        "final_score": _as_float(refreshed.final_score),
+        "stuck_signal_count": _as_int(refreshed.stuck_signal_count),
+        "nudges_used_in_stage": _as_int(refreshed.nudges_used_in_stage),
         "started_at": refreshed.started_at,
         "completed_at": refreshed.completed_at,
         "created_at": refreshed.created_at,
@@ -297,12 +318,12 @@ def _build_recent_context(db, session_id: str) -> list[dict[str, str]]:
     recent_evaluations = get_recent_evaluations_by_session_id(db, session_id, limit=3)
 
     context: list[dict[str, str]] = [
-        {"role": message.role, "content": message.content}
+        {"role": _as_str(message.role), "content": _as_str(message.content)}
         for message in recent_messages
     ]
     if recent_evaluations:
         summary_lines = [
-            f"{evaluation.stage}: {evaluation.summary or 'No summary'}"
+            f"{_as_str(evaluation.stage)}: {_as_str(evaluation.summary or 'No summary')}"
             for evaluation in reversed(recent_evaluations)
         ]
         context.insert(
@@ -332,14 +353,14 @@ def _normalize_chat_history(
 
 def _serialize_session_detail(session, can_code: bool) -> dict[str, Any]:
     return {
-        "id": session.id,
-        "user_id": session.user_id,
-        "problem_id": session.problem_id,
+        "id": _as_str(session.id),
+        "user_id": _as_str(session.user_id),
+        "problem_id": _as_str(session.problem_id),
         "stage": _as_stage(session.stage),
-        "status": session.status,
-        "final_score": session.final_score,
-        "stuck_signal_count": session.stuck_signal_count,
-        "nudges_used_in_stage": session.nudges_used_in_stage,
+        "status": _as_str(session.status),
+        "final_score": _as_float(session.final_score),
+        "stuck_signal_count": _as_int(session.stuck_signal_count),
+        "nudges_used_in_stage": _as_int(session.nudges_used_in_stage),
         "started_at": session.started_at,
         "completed_at": session.completed_at,
         "created_at": session.created_at,
