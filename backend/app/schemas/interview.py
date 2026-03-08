@@ -28,7 +28,7 @@ class InterviewSessionUpdateStage(BaseModel):
 
 
 class InterviewSessionComplete(BaseModel):
-    final_score: float | None = Field(default=None, ge=0, le=10)
+    final_score: float | None = Field(default=None, ge=0, le=50)
 
 
 class InterviewMessageCreate(BaseModel):
@@ -41,12 +41,12 @@ class InterviewMessageCreate(BaseModel):
 
 class InterviewEvaluationCreate(BaseModel):
     stage: InterviewStage
-    problem_understanding_score: int = Field(ge=0, le=2)
-    approach_quality_score: int = Field(ge=0, le=2)
-    code_correctness_reasoning_score: int = Field(ge=0, le=2)
-    complexity_analysis_score: int = Field(ge=0, le=2)
-    communication_clarity_score: int = Field(ge=0, le=2)
-    total_score: float = Field(ge=0, le=10)
+    problem_understanding_score: int = Field(ge=0, le=10)
+    approach_quality_score: int = Field(ge=0, le=10)
+    code_correctness_reasoning_score: int = Field(ge=0, le=10)
+    complexity_analysis_score: int = Field(ge=0, le=10)
+    communication_clarity_score: int = Field(ge=0, le=10)
+    total_score: float = Field(ge=0, le=50)
     passed: bool = False
     summary: str | None = None
     rubric_json: dict[str, Any] = Field(default_factory=dict)

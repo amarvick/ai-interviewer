@@ -206,7 +206,7 @@ def process_interview_message(
             complexity_analysis_score=rubric["complexity_analysis_score"],
             communication_clarity_score=rubric["communication_clarity_score"],
             total_score=category_total,
-            passed=category_total >= 6,
+            passed=category_total >= 30,
             rubric_json={"source": "llm_eval", "stage": previous_stage, **rubric},
         )
 
@@ -226,6 +226,15 @@ def process_interview_message(
         stage_at_message=_as_stage(session.stage),
         user_id=None,
     )
+    if bool(ai_message_payload.get("should_end_interview", False)):
+        session.status = "COMPLETED"
+        setattr(session, "stage", "COMPLETE")
+        session.completed_at = datetime.utcnow()
+        logger.info(
+            "interview.service.ai_completed session_id=%s user_id=%s",
+            _as_str(session.id),
+            user_id,
+        )
 
     db.commit()
     logger.info(
@@ -269,10 +278,63 @@ def complete_interview_session(
         return None
 
     evaluations = get_recent_evaluations_by_session_id(db, _as_str(session.id), limit=500)
+    if not evaluations:
+        stage_messages = [
+            {"role": _as_str(message.role), "content": _as_str(message.content)}
+            for message in session.messages
+            if _as_str(message.role) in {"user", "assistant"}
+        ]
+        if stage_messages:
+            try:
+                final_rubric = evaluate_stage_rubric(
+                    stage_messages=stage_messages,
+                    current_code=None,
+                )
+                final_total = (
+                    final_rubric["problem_understanding_score"]
+                    + final_rubric["approach_quality_score"]
+                    + final_rubric["code_correctness_reasoning_score"]
+                    + final_rubric["complexity_analysis_score"]
+                    + final_rubric["communication_clarity_score"]
+                )
+                create_interview_evaluation(
+                    db=db,
+                    session_id=_as_str(session.id),
+                    stage="FEEDBACK",
+                    summary=final_rubric.get(
+                        "summary", "Final interview evaluation generated."
+                    ),
+                    problem_understanding_score=final_rubric[
+                        "problem_understanding_score"
+                    ],
+                    approach_quality_score=final_rubric["approach_quality_score"],
+                    code_correctness_reasoning_score=final_rubric[
+                        "code_correctness_reasoning_score"
+                    ],
+                    complexity_analysis_score=final_rubric[
+                        "complexity_analysis_score"
+                    ],
+                    communication_clarity_score=final_rubric[
+                        "communication_clarity_score"
+                    ],
+                    total_score=final_total,
+                    passed=final_total >= 30,
+                    rubric_json={"source": "llm_eval_final", **final_rubric},
+                )
+                db.flush()
+            except Exception:
+                logger.exception(
+                    "interview.service.complete.final_rubric_failed session_id=%s",
+                    _as_str(session.id),
+                )
+        evaluations = get_recent_evaluations_by_session_id(
+            db, _as_str(session.id), limit=500
+        )
     computed_score = requested_final_score
     if computed_score is None:
         if evaluations:
-            computed_score = sum(e.total_score for e in evaluations) / len(evaluations)
+            average_total = sum(e.total_score for e in evaluations) / len(evaluations)
+            computed_score = average_total
         else:
             computed_score = 0
 
@@ -416,10 +478,22 @@ def _build_final_feedback(evaluations: list) -> dict[str, list[str]]:
         "complexity_analysis": "State exact time/space Big-O and tie it to each major operation.",
         "communication_clarity": "Answer in short structured bullets: plan, why, tradeoff.",
     }
+    ai_strengths: list[str] = []
+    for evaluation in reversed(evaluations):
+        rubric_json = getattr(evaluation, "rubric_json", None)
+        if isinstance(rubric_json, dict):
+            raw_strengths = rubric_json.get("strengths")
+            if isinstance(raw_strengths, list):
+                for item in raw_strengths:
+                    text = str(item).strip()
+                    if text:
+                        ai_strengths.append(text)
 
-    strengths = [f"{label[key]} ({avg:.2f}/2)" for key, avg in ordered_best[:2]]
-    gap_candidates = [item for item in ordered_worst if item[1] < 1.5] or ordered_worst[:2]
-    gaps = [f"{label[key]} ({avg:.2f}/2)" for key, avg in gap_candidates[:2]]
+    strengths = list(dict.fromkeys(ai_strengths))[:3]
+    if not strengths:
+        strengths = [f"{label[key]} ({avg:.2f}/10)" for key, avg in ordered_best[:2]]
+    gap_candidates = [item for item in ordered_worst if item[1] < 7.0] or ordered_worst[:2]
+    gaps = [f"{label[key]} ({avg:.2f}/10)" for key, avg in gap_candidates[:2]]
     next_steps = [next_step_by_gap[key] for key, _ in gap_candidates[:3]]
 
     return {"strengths": strengths, "gaps": gaps, "next_steps": next_steps}

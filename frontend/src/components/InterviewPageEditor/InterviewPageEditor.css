@@ -73,6 +73,11 @@
   color: #dcf9ef;
 }
 
+.interview-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .interview-chat-messages {
   overflow: auto;
   padding: 0.75rem;
@@ -160,6 +165,60 @@
   gap: 0.7rem;
 }
 
+.feedback-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #c9d9ff;
+  font-size: 0.9rem;
+}
+
+.feedback-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(174, 192, 255, 0.3);
+  border-top-color: rgba(174, 192, 255, 0.95);
+  border-radius: 50%;
+  animation: feedback-spin 0.8s linear infinite;
+}
+
+.score-card {
+  border: 1px solid rgba(132, 153, 219, 0.24);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  background: rgba(12, 19, 39, 0.72);
+}
+
+.score-card h4 {
+  margin: 0 0 0.35rem;
+  color: #bcd0ff;
+}
+
+.score-line {
+  margin: 0 0 0.45rem;
+}
+
+.pass-fail-pill {
+  display: inline-block;
+  margin: 0;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pass-fail-pass {
+  color: #d6ffe7;
+  border: 1px solid rgba(92, 209, 148, 0.7);
+  background: rgba(20, 74, 52, 0.55);
+}
+
+.pass-fail-fail {
+  color: #ffd7dd;
+  border: 1px solid rgba(238, 107, 125, 0.7);
+  background: rgba(82, 27, 36, 0.55);
+}
+
 .rubric-table {
   display: grid;
   gap: 0.35rem;
@@ -189,4 +248,13 @@
   padding: 0.35rem 0.65rem 0.55rem;
   color: #ffb3bd;
   font-size: 0.82rem;
+}
+
+@keyframes feedback-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

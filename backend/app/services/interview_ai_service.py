@@ -30,6 +30,7 @@ class InterviewerResponse(BaseModel):
     checklist_status: InterviewChecklist
     internal_thought: str = Field(description="Your reasoning for why you are asking this specific question")
     confidence: str # low, medium, high
+    should_end_interview: bool = False
 
 class RubricResponse(BaseModel):
     problem_understanding_score: int
@@ -38,6 +39,8 @@ class RubricResponse(BaseModel):
     complexity_analysis_score: int
     communication_clarity_score: int
     summary: str
+    strengths: list[str] = Field(default_factory=list)
+    additional_improvements: list[str] = Field(default_factory=list)
 
 def generate_next_interviewer_message(
     recent_messages: list[ChatTurn],
@@ -55,7 +58,10 @@ def generate_next_interviewer_message(
         "1. PROACTIVITY: If they code too early, ask them to discuss complexity first.\n"
         "2. CONCISENESS: Keep responses under 60 words.\n"
         "3. STATE: Update the 'checklist_status' based on the history.\n"
-        "4. NO SPOILERS: Never provide the full solution code."
+        "4. NO SPOILERS: Never provide the full solution code.\n"
+        "5. Ask the candidate for at least one concise dry-run walkthrough when useful.\n"
+        "6. If the interview is complete, do NOT ask to move to another question. "
+        "Provide a short closing line and set should_end_interview=true."
     )
 
     contents = _prepare_contents(recent_messages, current_code)
@@ -79,7 +85,8 @@ def generate_next_interviewer_message(
             "assistant_message": parsed.assistant_message,
             "checklist": parsed.checklist_status.model_dump(),
             "can_code": parsed.checklist_status.ready_to_code,
-            "internal_thought": parsed.internal_thought
+            "internal_thought": parsed.internal_thought,
+            "should_end_interview": bool(parsed.should_end_interview),
         }
     except Exception as exc:
         logger.exception("Gemini error")
@@ -110,8 +117,12 @@ def evaluate_stage_rubric(
             contents=f"Review this transcript and code:\n{transcript}{code_context}",
             config=types.GenerateContentConfig(
                 system_instruction=(
-                    "Score 0-2 for each category and return strict JSON only. "
-                    "Do not omit any field."
+                    "Score 0-10 for each category and return strict JSON only. "
+                    "The summary must highlight what the candidate did well first, "
+                    "then mention the most important gap if needed. "
+                    "Include 2-4 concrete strengths in a `strengths` array. "
+                    "Do not omit any field. Include 3-5 specific, actionable "
+                    "additional improvements based on candidate mistakes/gaps."
                 ),
                 response_mime_type="application/json",
                 response_schema=RubricResponse,
@@ -175,7 +186,8 @@ def _fallback_interviewer_message() -> dict[str, Any]:
     return {
         "assistant_message": "Tell me more about your approach.",
         "checklist": {"clarified_constraints": False, "proposed_approach": False, "complexity_analyzed": False, "ready_to_code": False},
-        "can_code": False
+        "can_code": False,
+        "should_end_interview": False,
     }
 
 def _fallback_rubric(reason: str | None = None) -> dict[str, Any]:
@@ -185,12 +197,21 @@ def _fallback_rubric(reason: str | None = None) -> dict[str, Any]:
         else "Automatic rubric fallback used."
     )
     return {
-        "problem_understanding_score": 1,
-        "approach_quality_score": 1,
-        "code_correctness_reasoning_score": 1,
-        "complexity_analysis_score": 1,
-        "communication_clarity_score": 1,
+        "problem_understanding_score": 5,
+        "approach_quality_score": 5,
+        "code_correctness_reasoning_score": 5,
+        "complexity_analysis_score": 5,
+        "communication_clarity_score": 5,
         "summary": summary,
+        "strengths": [
+            "Candidate engaged with the prompt and kept the discussion moving.",
+            "Candidate attempted to reason about the solution structure.",
+        ],
+        "additional_improvements": [
+            "Use a short structure for answers: approach, correctness, complexity.",
+            "State at least 2 edge cases before coding and validate them after coding.",
+            "Explain one tradeoff versus an alternative approach.",
+        ],
     }
 
 
@@ -210,6 +231,10 @@ def _normalize_rubric(raw: dict[str, Any]) -> dict[str, Any]:
             raw.get("communication_clarity_score")
         ),
         "summary": str(raw.get("summary", "")).strip()[:500],
+        "strengths": _normalize_improvements(raw.get("strengths")),
+        "additional_improvements": _normalize_improvements(
+            raw.get("additional_improvements")
+        ),
     }
 
 
@@ -217,5 +242,16 @@ def _coerce_score(value: Any) -> int:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
-        parsed = 1
-    return max(0, min(2, parsed))
+        parsed = 5
+    return max(0, min(10, parsed))
+
+
+def _normalize_improvements(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    normalized: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            normalized.append(text[:220])
+    return normalized[:5]

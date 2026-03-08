@@ -124,6 +124,8 @@ export default function InterviewPageEditor({
       try {
         const result = await completeInterviewSession(sessionId);
         setCompletionResult(result);
+        const detail = await getInterviewSession(sessionId);
+        setEvaluations(detail.evaluations ?? []);
       } catch {
         // keep chat functional if completion fails
       } finally {
@@ -270,10 +272,19 @@ export default function InterviewPageEditor({
   };
 
   const rubricRows = useMemo(() => summarizeRubric(evaluations), [evaluations]);
-  const nitpicks = useMemo(
-    () => buildNitpicks(rubricRows, completionResult),
-    [rubricRows, completionResult]
+  const aiAdditionalImprovements = useMemo(
+    () => extractAiAdditionalImprovements(evaluations),
+    [evaluations]
   );
+  const nitpicks = useMemo(
+    () =>
+      aiAdditionalImprovements.length > 0
+        ? aiAdditionalImprovements
+        : buildNitpicks(rubricRows, completionResult),
+    [aiAdditionalImprovements, rubricRows, completionResult]
+  );
+  const finalScore = completionResult?.final_score ?? null;
+  const didPass = finalScore !== null ? finalScore >= 30 : null;
 
   return (
     <div className="interview-editor-shell">
@@ -324,7 +335,12 @@ export default function InterviewPageEditor({
                 role="tab"
                 aria-selected={activeTab === "feedback"}
                 className={`interview-tab ${activeTab === "feedback" ? "active" : ""}`}
-                onClick={() => setActiveTab("feedback")}
+                onClick={() => {
+                  if (sessionStatus === "COMPLETED") {
+                    setActiveTab("feedback");
+                  }
+                }}
+                disabled={sessionStatus !== "COMPLETED"}
               >
                 Feedback
               </button>
@@ -374,6 +390,27 @@ export default function InterviewPageEditor({
               </>
             ) : (
               <div className="interview-feedback-panel">
+                {isLoadingFeedback && (
+                  <div className="feedback-loading" role="status" aria-live="polite">
+                    <span className="feedback-spinner" aria-hidden="true" />
+                    <span>Generating feedback...</span>
+                  </div>
+                )}
+                {completionResult && (
+                  <div className="score-card">
+                    <h4>Final Result</h4>
+                    <p className="score-line">
+                      Score: <strong>{(finalScore ?? 0).toFixed(2)} / 50.00</strong>
+                    </p>
+                    <p
+                      className={`pass-fail-pill ${
+                        didPass ? "pass-fail-pass" : "pass-fail-fail"
+                      }`}
+                    >
+                      {didPass ? "Pass" : "Fail"}
+                    </p>
+                  </div>
+                )}
                 <h3>Rubric</h3>
                 {rubricRows.length === 0 && (
                   <p className="interview-chat-empty">
@@ -385,7 +422,7 @@ export default function InterviewPageEditor({
                     {rubricRows.map((row) => (
                       <div key={row.label} className="rubric-row">
                         <span>{row.label}</span>
-                        <span>{row.value.toFixed(2)} / 2.00</span>
+                        <span>{row.value.toFixed(2)} / 10.00</span>
                       </div>
                     ))}
                   </div>
@@ -515,4 +552,27 @@ function buildNitpicks(
     nits.push("Summarize final tradeoffs in one sentence before submission.");
   }
   return Array.from(new Set(nits));
+}
+
+function extractAiAdditionalImprovements(
+  evaluations: InterviewEvaluationResponse[]
+): string[] {
+  const ordered = [...evaluations].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  for (const evaluation of ordered) {
+    const raw = (evaluation.rubric_json ?? {}) as Record<string, unknown>;
+    const candidate = raw.additional_improvements;
+    if (!Array.isArray(candidate)) {
+      continue;
+    }
+    const normalized = candidate
+      .map((item) => String(item).trim())
+      .filter((item) => item.length > 0)
+      .slice(0, 6);
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+  return [];
 }
