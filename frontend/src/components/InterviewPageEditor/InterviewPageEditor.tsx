@@ -390,66 +390,69 @@ export default function InterviewPageEditor({
               </>
             ) : (
               <div className="interview-feedback-panel">
-                {isLoadingFeedback && (
+                {isLoadingFeedback ? (
                   <div className="feedback-loading" role="status" aria-live="polite">
                     <span className="feedback-spinner" aria-hidden="true" />
                     <span>Generating feedback...</span>
                   </div>
-                )}
-                {completionResult && (
-                  <div className="score-card">
-                    <h4>Final Result</h4>
-                    <p className="score-line">
-                      Score: <strong>{(finalScore ?? 0).toFixed(2)} / 50.00</strong>
-                    </p>
-                    <p
-                      className={`pass-fail-pill ${
-                        didPass ? "pass-fail-pass" : "pass-fail-fail"
-                      }`}
-                    >
-                      {didPass ? "Pass" : "Fail"}
-                    </p>
-                  </div>
-                )}
-                <h3>Rubric</h3>
-                {rubricRows.length === 0 && (
-                  <p className="interview-chat-empty">
-                    Feedback will appear here once the interview has enough signal.
-                  </p>
-                )}
-                {rubricRows.length > 0 && (
-                  <div className="rubric-table">
-                    {rubricRows.map((row) => (
-                      <div key={row.label} className="rubric-row">
-                        <span>{row.label}</span>
-                        <span>{row.value.toFixed(2)} / 10.00</span>
+                ) : (
+                  <>
+                    {completionResult && (
+                      <div className="score-card">
+                        <h4>Final Result</h4>
+                        <p className="score-line">
+                          Score: <strong>{(finalScore ?? 0).toFixed(2)} / 50.00</strong>
+                        </p>
+                        <p
+                          className={`pass-fail-pill ${
+                            didPass ? "pass-fail-pass" : "pass-fail-fail"
+                          }`}
+                        >
+                          {didPass ? "Pass" : "Fail"}
+                        </p>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                    <h3>Rubric</h3>
+                    {rubricRows.length === 0 && (
+                      <p className="interview-chat-empty">
+                        Feedback will appear here once the interview has enough signal.
+                      </p>
+                    )}
+                    {rubricRows.length > 0 && (
+                      <div className="rubric-table">
+                        {rubricRows.map((row) => (
+                          <div key={row.label} className="rubric-row">
+                            <span>{row.label}</span>
+                            <span>{row.value.toFixed(2)} / 10.00</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {completionResult && (
+                      <div className="feedback-block">
+                        <h4>Summary</h4>
+                        <ul className="feedback-list">
+                          {completionResult.strengths.map((item) => (
+                            <li key={`strength-${item}`}>{item}</li>
+                          ))}
+                        </ul>
+                        <ul className="feedback-list">
+                          {completionResult.gaps.map((item) => (
+                            <li key={`gap-${item}`}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="feedback-block">
+                      <h4>Additional Improvements</h4>
+                      <ul className="feedback-list">
+                        {nitpicks.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
                 )}
-                {completionResult && (
-                  <div className="feedback-block">
-                    <h4>Summary</h4>
-                    <ul className="feedback-list">
-                      {completionResult.strengths.map((item) => (
-                        <li key={`strength-${item}`}>{item}</li>
-                      ))}
-                    </ul>
-                    <ul className="feedback-list">
-                      {completionResult.gaps.map((item) => (
-                        <li key={`gap-${item}`}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div className="feedback-block">
-                  <h4>Additional Improvements</h4>
-                  <ul className="feedback-list">
-                    {nitpicks.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
               </div>
             )}
             {error && <p className="interview-chat-error">{error}</p>}
